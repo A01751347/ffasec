@@ -1,5 +1,11 @@
 import React, { useState } from 'react';
 
+
+const formatDate = (dateStr) => {
+  if (!dateStr) return '';
+  return dateStr.substring(0, 10);
+};
+
 const CustomerOrdersSearch = () => {
   const [searchTerm, setSearchTerm] = useState('');
   const [customers, setCustomers] = useState([]);
@@ -88,7 +94,7 @@ const CustomerOrdersSearch = () => {
                   <tr key={index}>
                     <td className="border p-2">{order.ticket}</td>
                     <td className="border p-2">{order.total}</td>
-                    <td className="border p-2">{order.date}</td>
+                    <td className="border p-2">{formatDate(order.date)}</td>
                   </tr>
                 ))}
               </tbody>

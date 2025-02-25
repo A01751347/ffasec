@@ -4,6 +4,8 @@ import SearchTicket from './components/SearchTicket.jsx';
 import DailyReport from './components/DailyReport.jsx';
 import UploadExcel from './components/UploadExcel.jsx';
 import CustomerOrdersSearch from './components/CustomerOrdersSearch';
+import Inventory from './components/Inventory';
+import InventoryDetails from './components/InventoryDetails';
 
 function App() {
   return (
@@ -12,6 +14,10 @@ function App() {
       <UploadExcel />
       <div className="mb-8">
         <SearchTicket />
+
+      <Inventory />
+
+      <InventoryDetails />
       </div>
       <div>
         <DailyReport />
