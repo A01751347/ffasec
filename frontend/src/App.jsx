@@ -1,29 +1,29 @@
 // src/App.jsx
 import React from 'react';
-import SearchTicket from './components/SearchTicket.jsx';
-import DailyReport from './components/DailyReport.jsx';
-import UploadExcel from './components/UploadExcel.jsx';
-import CustomerOrdersSearch from './components/CustomerOrdersSearch';
-import Inventory from './components/Inventory';
-import InventoryDetails from './components/InventoryDetails';
+import { BrowserRouter as Router, Routes, Route, Link } from 'react-router-dom';
+import DashboardPage from './pages/DashboardPage';
+import InventoryPage from './pages/InventoryPage';
+import OrdersPage from './pages/OrdersPage';
+import UploadPage from './pages/UploadPage';
+import ReportPage from './pages/ReportPage';
+import CustomersPage from './pages/CustomersPage';
+import Sidebar from './components/Sidebar';
 
 function App() {
   return (
-    <div className="container mx-auto p-4">
-      <h1 className="text-4xl font-bold text-center mb-8">Dashboard de Facturas</h1>
-      <UploadExcel />
-      <div className="mb-8">
-        <SearchTicket />
-
-      <Inventory />
-
-      <InventoryDetails />
+    <Router>
+        <div>
+          <Sidebar/>
+        <Routes>
+          <Route path="/" element={<DashboardPage />} />
+          <Route path="/inventory" element={<InventoryPage />} />
+          <Route path="/orders" element={<OrdersPage />} />
+          <Route path="/upload" element={<UploadPage />} />
+          <Route path="/report" element={<ReportPage />} />
+          <Route path="/customers" element={<CustomersPage />} />
+        </Routes>
       </div>
-      <div>
-        <DailyReport />
-        <CustomerOrdersSearch />
-      </div>
-    </div>
+    </Router>
   );
 }
 
