@@ -13,7 +13,6 @@ function App() {
   return (
     <Router>
         <div>
-          <Sidebar/>
         <Routes>
           <Route path="/" element={<DashboardPage />} />
           <Route path="/inventory" element={<InventoryPage />} />
