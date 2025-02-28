@@ -1,55 +1,57 @@
+// src/components/data/CategoryChart.jsx
 import { motion } from "framer-motion";
 import { PieChart, Pie, Cell, Tooltip, ResponsiveContainer, Legend } from "recharts";
-
-const categoryData = [
-    { name: 'Tenis', sales: 4700 },
-    { name: 'Edredones', sales: 4100 },
-    { name: 'Pantalones', sales: 5200 },
-    { name: 'Camisas', sales: 6300 },
-    { name: 'Chamarras', sales: 4600 }, // Corrección de "Chammararas"
-];
+import React, { useEffect, useState } from "react";
 
 const COLORS = ['#6366F1', '#8B5CD6', '#EC4899', '#10B981', '#F59E0B'];
 
 const CategoryChart = () => {
-    return (
-        <motion.div
-            className='bg-gray-800 bg-opacity-50 backdrop-blur-md shadow-lg rounded-xl p-6 border border-gray-700'
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ delay: 0.3 }}
-        >
-            <h2 className='text-lg font-medium mb-4 text-gray-100'>Category Distribution</h2>
-            <div className='h-80'>
-                <ResponsiveContainer width="100%" height="100%">
-                    <PieChart>
-                        <Pie
-                            data={categoryData}
-                            cx="50%"
-                            cy="50%"
-                            labelLine={false}
-                            outerRadius={80}
-                            fill='#8884d8'
-                            dataKey="sales" // ✅ Corrección aquí
-                            label={({ name, percent }) => `${name} ${(percent * 100).toFixed(0)}%`}
-                        >
-                            {categoryData.map((entry, index) => (
-                                <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
-                            ))}
-                        </Pie>
-                        <Tooltip
-                            contentStyle={{
-                                backgroundColor: "rgba(31, 41, 55, 0.8)",
-                                borderColor: "#4B5563",
-                            }}
-                            itemStyle={{ color: "#E5E7EB" }}
-                        />
-                        <Legend />
-                    </PieChart>
-                </ResponsiveContainer>
-            </div>
-        </motion.div>
-    );
-}
+  const [data, setData] = useState([]);
+
+  useEffect(() => {
+    fetch('http://localhost:5002/api/categoryDistribution')
+      .then(res => res.json())
+      .then(json => setData(json))
+      .catch(err => console.error("Error fetching category distribution:", err));
+  }, []);
+
+  return (
+    <motion.div
+      className='bg-gray-800 bg-opacity-50 backdrop-blur-md shadow-lg rounded-xl p-6 border border-gray-700'
+      initial={{ opacity: 0, y: 20 }}
+      animate={{ opacity: 1, y: 0 }}
+      transition={{ delay: 0.3 }}
+    >
+      <h2 className='text-lg font-medium mb-4 text-gray-100'>Categorías (Piezas Totales)</h2>
+      <div className='h-80'>
+        <ResponsiveContainer width="100%" height="100%">
+          <PieChart>
+            <Pie
+              data={data}
+              cx="50%"
+              cy="50%"
+              labelLine={false}
+              outerRadius={80}
+              dataKey="totalPieces"
+              label={({ category, percent }) => `${category} (${(percent * 100).toFixed(0)}%)`}
+            >
+              {data.map((entry, index) => (
+                <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
+              ))}
+            </Pie>
+            <Tooltip
+              contentStyle={{
+                backgroundColor: "rgba(31, 41, 55, 0.8)",
+                borderColor: "#4B5563",
+              }}
+              itemStyle={{ color: "#E5E7EB" }}
+            />
+            <Legend />
+          </PieChart>
+        </ResponsiveContainer>
+      </div>
+    </motion.div>
+  );
+};
 
 export default CategoryChart;
