@@ -6,7 +6,7 @@ const DailyReport = () => {
 
   const fetchReport = async () => {
     try {
-      const response = await fetch(`http://localhost:5001/api/report/daily?date=${date}`);
+      const response = await fetch(`http://localhost:5002/api/report/daily?date=${date}`);
       const data = await response.json();
       setReport(data); // data contendrá { total_money, total_pieces }
     } catch (error) {

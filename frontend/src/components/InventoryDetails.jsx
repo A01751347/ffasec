@@ -11,7 +11,7 @@ const InventoryDetails = () => {
 
   const fetchInventoryDetails = async () => {
     try {
-      const res = await fetch('http://localhost:5001/api/inventario/details');
+      const res = await fetch('http://localhost:5002/api/inventario/details');
       const data = await res.json();
       setDetails(data);
     } catch (error) {

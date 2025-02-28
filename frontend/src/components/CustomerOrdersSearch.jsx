@@ -26,7 +26,7 @@ const CustomerOrdersSearch = () => {
   // Función para obtener las órdenes de un cliente
   const fetchOrders = async (customerId) => {
     try {
-      const response = await fetch(`http://localhost:5001/api/orders/byCustomer/${customerId}`);
+      const response = await fetch(`http://localhost:5002/api/orders/byCustomer/${customerId}`);
       const data = await response.json();
       setOrders(data);
     } catch (error) {

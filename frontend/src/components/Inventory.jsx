@@ -8,7 +8,7 @@ const Inventory = () => {
   // Función para obtener el inventario actual
   const fetchInventory = async () => {
     try {
-      const res = await fetch('http://localhost:5001/api/inventario');
+      const res = await fetch('http://localhost:5002/api/inventario');
       const data = await res.json();
       setInventory(data);
     } catch (error) {

@@ -20,7 +20,7 @@ app.use('/api/upload', uploadRoutes);
 app.use('/api/customers', customerRoutes);
 app.use('/api/inventario', inventoryRoutes);
 
-const PORT = 5001;
+const PORT = 5002;
 app.listen(PORT, () => {
   console.log(`Servidor corriendo en puerto ${PORT}`);
 });
