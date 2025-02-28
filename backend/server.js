@@ -22,11 +22,12 @@ app.use('/api/orders', orderRoutes);
 app.use('/api/report', reportRoutes);
 app.use('/api/upload', uploadRoutes);
 app.use('/api/customers', customerRoutes);
-app.use('/api/inventario', inventoryRoutes);
 app.use('/api/products', productsRoutes);
 app.use('/api/salesOverview', salesOverviewRoutes);
 app.use('/api/dashboardStats', dashboardStatsRoutes);
 app.use('/api/categoryDistribution', categoryDistributionRoutes);
+
+app.use(inventoryRoutes);
 
 const PORT = 5002;
 app.listen(PORT, () => {

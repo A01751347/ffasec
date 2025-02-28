@@ -31,7 +31,7 @@ const ProductsTable = () => {
     fetchProducts();
   }, [fromDate, toDate]);
 
-  // Filtrar productos en base al término de búsqueda y reiniciar la paginación
+  // Filtrar productos según el término de búsqueda
   useEffect(() => {
     const filtered = allProducts.filter(
       (product) =>
@@ -66,43 +66,45 @@ const ProductsTable = () => {
       animate={{ opacity: 1, y: 0 }}
       transition={{ delay: 0.2 }}
     >
-      {/* Rango de fechas */}
-      <div className="flex gap-4 mb-4">
-        <div>
+      {/* Rango de fechas - en columna en móviles y en fila en pantallas medianas */}
+      <div className="flex flex-col sm:flex-row gap-4 mb-4">
+        <div className="flex-1">
           <label className="text-gray-100 block mb-1">Desde:</label>
           <input
             type="date"
             value={fromDate}
             onChange={(e) => setFromDate(e.target.value)}
-            className="border p-2 rounded bg-gray-700 text-white"
+            className="w-full border p-2 rounded bg-gray-700 text-white"
           />
         </div>
-        <div>
+        <div className="flex-1">
           <label className="text-gray-100 block mb-1">Hasta:</label>
           <input
             type="date"
             value={toDate}
             onChange={(e) => setToDate(e.target.value)}
-            className="border p-2 rounded bg-gray-700 text-white"
+            className="w-full border p-2 rounded bg-gray-700 text-white"
           />
         </div>
-        <button
-          onClick={fetchProducts}
-          className="bg-blue-500 text-white p-2 rounded self-end"
-        >
-          Filtrar
-        </button>
+        <div className="self-end">
+          <button
+            onClick={fetchProducts}
+            className="bg-blue-500 text-white p-2 rounded w-full sm:w-auto"
+          >
+            Filtrar
+          </button>
+        </div>
       </div>
 
-      {/* Título y búsqueda */}
-      <div className="flex justify-between items-center mb-6">
+      {/* Título y búsqueda - se acomoda en columna en móviles */}
+      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-6 gap-4">
         <h2 className="text-xl font-semibold text-gray-100">Lista de Productos</h2>
-        <div className="relative">
+        <div className="relative w-full sm:w-auto">
           <Search className="absolute left-3 top-2.5 text-gray-400" size={18} />
           <input
             type="text"
             placeholder="Buscar productos..."
-            className="bg-gray-700 text-white placeholder-gray-400 rounded-lg pl-10 pr-4 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
+            className="w-full bg-gray-700 text-white placeholder-gray-400 rounded-lg pl-10 pr-4 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
             onChange={(e) => setSearchTerm(e.target.value)}
             value={searchTerm}
           />
@@ -165,11 +167,11 @@ const ProductsTable = () => {
       </div>
 
       {/* Controles de paginación */}
-      <div className="flex justify-center items-center mt-4">
+      <div className="flex flex-col sm:flex-row justify-center items-center mt-4 gap-2">
         <button
           onClick={handlePrev}
           disabled={currentPage === 1}
-          className={`px-4 py-2 mr-2 rounded ${
+          className={`px-4 py-2 rounded ${
             currentPage === 1 ? "bg-gray-600 text-gray-300" : "bg-blue-500 text-white"
           }`}
         >
@@ -181,7 +183,7 @@ const ProductsTable = () => {
         <button
           onClick={handleNext}
           disabled={currentPage === totalPages}
-          className={`px-4 py-2 ml-2 rounded ${
+          className={`px-4 py-2 rounded ${
             currentPage === totalPages ? "bg-gray-600 text-gray-300" : "bg-blue-500 text-white"
           }`}
         >

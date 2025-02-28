@@ -1,9 +1,8 @@
-// src/components/data/CategoryChart.jsx
 import { motion } from "framer-motion";
 import { PieChart, Pie, Cell, Tooltip, ResponsiveContainer, Legend } from "recharts";
 import React, { useEffect, useState } from "react";
 
-const COLORS = ['#6366F1', '#8B5CD6', '#EC4899', '#10B981', '#F59E0B'];
+const COLORS = ['#6366F1', '#8B5CD6', '#EC4899', '#10B981', '#F59E0B', '#EC4899'];
 
 const CategoryChart = () => {
   const [data, setData] = useState([]);
@@ -33,7 +32,8 @@ const CategoryChart = () => {
               labelLine={false}
               outerRadius={80}
               dataKey="totalPieces"
-              label={({ category, percent }) => `${category} (${(percent * 100).toFixed(0)}%)`}
+              nameKey="category"
+              label={({ payload, percent }) => `${payload.category} (${(percent * 100).toFixed(0)}%)`}
             >
               {data.map((entry, index) => (
                 <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
@@ -46,7 +46,6 @@ const CategoryChart = () => {
               }}
               itemStyle={{ color: "#E5E7EB" }}
             />
-            <Legend />
           </PieChart>
         </ResponsiveContainer>
       </div>

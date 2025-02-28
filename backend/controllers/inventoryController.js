@@ -46,3 +46,31 @@ exports.getInventoryDetails = (req, res) => {
     res.json(results);
   });
 };
+
+// Función para actualizar (PUT)
+exports.updateInventory = (req, res) => {
+  const { ticket } = req.params;
+  // Por ejemplo, actualizamos el campo "telefono"
+  const { telefono } = req.body;
+  const query = `UPDATE Inventario SET telefono = ? WHERE registro = ?`;
+  db.query(query, [telefono, ticket], (err, results) => {
+    if (err) {
+      console.error(err);
+      return res.status(500).json({ error: err.message });
+    }
+    res.json({ message: 'Registro actualizado correctamente' });
+  });
+};
+
+// Función para eliminar (DELETE)
+exports.deleteInventory = (req, res) => {
+  const { ticket } = req.params;
+  const query = `DELETE FROM Inventario WHERE registro = ?`;
+  db.query(query, [ticket], (err, results) => {
+    if (err) {
+      console.error(err);
+      return res.status(500).json({ error: err.message });
+    }
+    res.json({ message: 'Registro eliminado correctamente' });
+  });
+};
