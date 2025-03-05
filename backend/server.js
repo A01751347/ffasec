@@ -1,9 +1,12 @@
 const express = require('express');
 const cors = require('cors');
 const app = express();
+const PORT = 5002;
+const path = require('path');
 
 app.use(cors());
 app.use(express.json());
+app.use(express.static(path.join(__dirname, '../frontend/dist')));
 
 // Importar rutas existentes
 const orderRoutes = require('./routes/orderRoutes');
@@ -29,9 +32,10 @@ app.use('/api/categoryDistribution', categoryDistributionRoutes);
 
 app.use(inventoryRoutes);
 
-const PORT = 5002;
 app.listen(PORT, () => {
   console.log(`Servidor corriendo en puerto ${PORT}`);
 });
 
-
+app.get('*', (req, res) => {
+  res.sendFile(path.join(__dirname, '../frontend/dist', 'index.html'));
+});

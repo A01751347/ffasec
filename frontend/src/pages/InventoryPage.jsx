@@ -16,7 +16,7 @@ const InventoryPage = () => {
 
   // Obtener el total de prendas (suma de piezas) de los últimos 365 días
   useEffect(() => {
-    fetch("http://localhost:5002/api/dashboardStats")
+    fetch("/api/dashboardStats")
       .then((res) => res.json())
       .then((data) => {
         setTotalPieces(data.totalPieces365 || 0);
@@ -26,7 +26,7 @@ const InventoryPage = () => {
 
   // Obtener la categoría más popular a partir del endpoint de categoryDistribution
   useEffect(() => {
-    fetch("http://localhost:5002/api/categoryDistribution")
+    fetch("/api/categoryDistribution")
       .then((res) => res.json())
       .then((data) => {
         // Suponemos que el primer objeto es el de mayor suma de piezas
@@ -39,7 +39,7 @@ const InventoryPage = () => {
 
   // Obtener el total de ventas desde hace 365 días hasta hoy
   useEffect(() => {
-    fetch("http://localhost:5002/api/dashboardStats")
+    fetch("/api/dashboardStats")
       .then((res) => res.json())
       .then((data) => {
         setTotalSales(data.totalSales365 || 0);

@@ -9,7 +9,7 @@ const Inventory = () => {
   // Función para obtener el inventario actual
   const fetchInventory = async () => {
     try {
-      const res = await fetch("http://localhost:5002/api/inventario");
+      const res = await fetch("/api/inventario");
       const data = await res.json();
       setInventory(data);
     } catch (error) {
@@ -25,7 +25,7 @@ const Inventory = () => {
   const handleSubmit = async (e) => {
     e.preventDefault();
     try {
-      const res = await fetch("http://localhost:5002/api/inventario", {
+      const res = await fetch("/api/inventario", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ registro: parseInt(registro, 10) }),

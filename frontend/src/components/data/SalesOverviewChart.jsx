@@ -7,7 +7,7 @@ const SalesOverviewChart = () => {
   const [salesData, setSalesData] = useState([]);
 
   useEffect(() => {
-    fetch("http://localhost:5002/api/salesOverview")
+    fetch("/api/salesOverview")
       .then((res) => res.json())
       .then((data) => {
         // Formateamos los datos: renombramos 'month' a 'name' para que la gráfica lo use

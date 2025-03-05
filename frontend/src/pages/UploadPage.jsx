@@ -17,7 +17,7 @@ const UploadPage = () => {
   });
 
   useEffect(() => {
-    fetch('http://localhost:5002/api/dashboardStats')
+    fetch('/api/dashboardStats')
       .then(res => res.json())
       .then(data => setStats(data))
       .catch(err => console.error('Error fetching dashboard stats:', err));

@@ -8,7 +8,7 @@ const CategoryChart = () => {
   const [data, setData] = useState([]);
 
   useEffect(() => {
-    fetch('http://localhost:5002/api/categoryDistribution')
+    fetch('/api/categoryDistribution')
       .then(res => res.json())
       .then(json => setData(json))
       .catch(err => console.error("Error fetching category distribution:", err));

@@ -23,7 +23,7 @@ const InventoryDetails = () => {
   // Cargar detalles de inventario
   const fetchInventoryDetails = async () => {
     try {
-      const res = await fetch("http://localhost:5002/api/inventario/details");
+      const res = await fetch("/api/inventario/details");
       const data = await res.json();
       setDetails(data);
     } catch (error) {
@@ -39,7 +39,7 @@ const InventoryDetails = () => {
   const handleAddRegistroSubmit = async (e) => {
     e.preventDefault();
     try {
-      const res = await fetch("http://localhost:5002/api/inventario", {
+      const res = await fetch("/api/inventario", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ registro: parseInt(newRegistro, 10) }),
@@ -63,7 +63,7 @@ const InventoryDetails = () => {
   const handleDelete = async (ticket) => {
     if (!window.confirm("¿Está seguro de eliminar este registro?")) return;
     try {
-      const res = await fetch(`http://localhost:5002/api/inventario/details/${ticket}`, {
+      const res = await fetch(`/api/inventario/details/${ticket}`, {
         method: "DELETE",
       });
       const data = await res.json();
@@ -99,7 +99,7 @@ const InventoryDetails = () => {
     e.preventDefault();
     try {
       const res = await fetch(
-        `http://localhost:5002/api/inventario/details/${editFormData.ticket}`,
+        `/api/inventario/details/${editFormData.ticket}`,
         {
           method: "PUT",
           headers: { "Content-Type": "application/json" },

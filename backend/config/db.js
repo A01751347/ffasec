@@ -2,8 +2,9 @@ const mysql = require('mysql2');
 
 const connection = mysql.createConnection({
   host: 'localhost',
-  user: 'root',         // Ajusta según tu entorno
-  password: '',         // Ajusta según tu entorno
+  //user: 'root',
+  user: 'my_app_user',  // Cambia a 'my_app_user'
+  password: '',         // Contraseña vacía (tal como lo creaste)
   database: 'facturas_db'
 });
 

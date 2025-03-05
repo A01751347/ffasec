@@ -12,7 +12,7 @@ const ProductsTable = () => {
   const itemsPerPage = 7;
 
   const fetchProducts = () => {
-    let url = "http://localhost:5002/api/products";
+    let url = "/api/products";
     if (fromDate && toDate) {
       url += `?from=${fromDate}&to=${toDate}`;
     }

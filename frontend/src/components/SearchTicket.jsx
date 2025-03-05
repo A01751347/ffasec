@@ -12,7 +12,7 @@ const SearchTicket = () => {
 
   const handleSearch = async () => {
     try {
-      const response = await fetch(`http://localhost:5002/api/orders/${ticket}`);
+      const response = await fetch(`/api/orders/${ticket}`);
       const data = await response.json();
       setOrderData(data);
     } catch (error) {
