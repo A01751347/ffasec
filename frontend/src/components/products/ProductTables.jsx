@@ -2,17 +2,17 @@ import { motion } from "framer-motion";
 import { Search } from "lucide-react";
 import { useState, useEffect } from "react";
 
-const ProductsTable = () => {
+const ProductsTable = ({ fromDate, toDate }) => {
   const [searchTerm, setSearchTerm] = useState("");
   const [allProducts, setAllProducts] = useState([]);
   const [filteredProducts, setFilteredProducts] = useState([]);
   const [currentPage, setCurrentPage] = useState(1);
-  const [fromDate, setFromDate] = useState("");
-  const [toDate, setToDate] = useState("");
+
   const itemsPerPage = 7;
 
   const fetchProducts = () => {
     let url = "/api/products";
+    // Agregamos los query params si vienen desde el padre
     if (fromDate && toDate) {
       url += `?from=${fromDate}&to=${toDate}`;
     }
@@ -27,6 +27,7 @@ const ProductsTable = () => {
       });
   };
 
+  // Llamar fetchProducts cada vez que cambien las fechas
   useEffect(() => {
     fetchProducts();
   }, [fromDate, toDate]);
@@ -66,37 +67,7 @@ const ProductsTable = () => {
       animate={{ opacity: 1, y: 0 }}
       transition={{ delay: 0.2 }}
     >
-      {/* Rango de fechas - en columna en móviles y en fila en pantallas medianas */}
-      <div className="flex flex-col sm:flex-row gap-4 mb-4">
-        <div className="flex-1">
-          <label className="text-gray-100 block mb-1">Desde:</label>
-          <input
-            type="date"
-            value={fromDate}
-            onChange={(e) => setFromDate(e.target.value)}
-            className="w-full border p-2 rounded bg-gray-700 text-white"
-          />
-        </div>
-        <div className="flex-1">
-          <label className="text-gray-100 block mb-1">Hasta:</label>
-          <input
-            type="date"
-            value={toDate}
-            onChange={(e) => setToDate(e.target.value)}
-            className="w-full border p-2 rounded bg-gray-700 text-white"
-          />
-        </div>
-        <div className="self-end">
-          <button
-            onClick={fetchProducts}
-            className="bg-blue-500 text-white p-2 rounded w-full sm:w-auto"
-          >
-            Filtrar
-          </button>
-        </div>
-      </div>
-
-      {/* Título y búsqueda - se acomoda en columna en móviles */}
+      {/* Título y búsqueda */}
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-6 gap-4">
         <h2 className="text-xl font-semibold text-gray-100">Lista de Productos</h2>
         <div className="relative w-full sm:w-auto">

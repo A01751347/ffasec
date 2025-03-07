@@ -39,7 +39,6 @@ exports.uploadExcel = (req, res) => {
         orderHeader['clientebis']
       ], (err) => {
         if (err) {
-          console.error('Error en Customers:', err);
           return;
         }
         // Insertar en Orders
@@ -55,7 +54,6 @@ exports.uploadExcel = (req, res) => {
           orderHeader['idcliente']
         ], (err) => {
           if (err) {
-            console.error('Error en Orders:', err);
             return;
           }
           // Insertar en OrderDetails (incluyendo la fecha)
@@ -75,7 +73,7 @@ detailsRows.forEach(row => {
               orderDate,
               row['nimplinea']
             ], (err) => {
-              if (err) console.error('Error en OrderDetails:', err);
+              if (err){};
             });
           });
         });
@@ -84,7 +82,5 @@ detailsRows.forEach(row => {
     
     res.json({ message: 'Archivo procesado y datos migrados correctamente.' });
   } catch (error) {
-    console.error("Error al procesar el archivo:", error);
-    res.status(500).json({ error: 'Error al procesar el archivo.' });
   }
 };
