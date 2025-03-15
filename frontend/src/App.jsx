@@ -24,6 +24,7 @@ function App() {
 
 
           <Routes>
+            <Route path="/" element={<DashboardPage />} />
             <Route path="/inventory" element={<InventoryPage />} />
             <Route path="/orders" element={<OrdersPage />} />
             <Route path="/upload" element={<UploadPage />} />

@@ -1,12 +1,9 @@
-// ReportPage.jsx
 import React, { useState, useEffect } from 'react';
 import Header from '../components/common/Header';
 import StatCard from '../components/common/StatCard';
 import { motion } from 'framer-motion';
 import { Calendar, DollarSign, Package } from 'lucide-react';
 import OrderList from '../components/reports/OrderList';
-import OrderCarousel from '../components/OrdersCarousel';
-import FileList from '../components/FileList';
 
 const getCurrentDate = () => {
   const now = new Date();
@@ -33,7 +30,7 @@ const ReportPage = () => {
 
     const fetchOrders = async () => {
       try {
-        const res = await fetch(`/api/orders/byDate?date=${selectedDate}`);
+        const res = await fetch(`/api/ordersByDate?date=${selectedDate}`);
         const data = await res.json();
         setOrders(data);
       } catch (error) {
@@ -49,6 +46,7 @@ const ReportPage = () => {
     <div className="flex-1 overflow-auto relative z-10">
       <Header title='Reporte Diario' />
       <main className="max-w-7xl mx-auto py-6 px-4 lg:px-8 xl:px-12">
+        
         <motion.div
           className="flex flex-col sm:flex-row gap-4 mb-4 bg-gray-800 bg-opacity-50 backdrop-blur-md shadow-lg rounded-xl p-6 border border-gray-700"
           initial={{ opacity: 0, y: 20 }}
@@ -93,7 +91,6 @@ const ReportPage = () => {
         </motion.div>
 
         <OrderList orders={orders} />
-        <FileList/>
       </main>
     </div>
   );

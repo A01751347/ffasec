@@ -1,10 +1,9 @@
 import React, { useState } from 'react';
-import { BarChart2, DollarSign, Home, Menu, PersonStanding, Settings, ShoppingBag } from 'lucide-react';
+import { BarChart2, DollarSign, Menu, PersonStanding, Settings, ShoppingBag } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Link } from 'react-router-dom';
 
 const SIDEBAR_ITEMS = [
-  { name: 'Inicio', icon: Home, color: '#8AD5F6', path: '/' },
   { name: 'Datos', icon: BarChart2, color: '#8AD5F6', path: '/upload' },
   { name: 'Inventario', icon: ShoppingBag, color: '#8AD5F6', path: '/inventory' },
   { name: 'Reporte Diario', icon: DollarSign, color: '#8AD5F6', path: '/report' },

@@ -1,3 +1,4 @@
+// reportController.js
 const db = require('../config/db');
 
 exports.getDailyReport = (req, res) => {
