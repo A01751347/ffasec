@@ -107,7 +107,7 @@ const DashboardPage = () => {
             name="Órdenes Totales"
             icon={Package}
             value={stats.current.orders}
-            color="#6366f1"
+            color="#efefef"
             trend={formatTrend(stats.trends.orders)}
           />
           <StatCard
@@ -115,21 +115,21 @@ const DashboardPage = () => {
             icon={DollarSign}
             type="Money"
             value={formatMoney(stats.current.averageTicket)}
-            color="#8B5CF6"
+            color="#efefef"
             trend={formatTrend(stats.trends.averageTicket)}
           />
           <StatCard
             name="Clientes Distintos"
             icon={Users}
             value={stats.current.customers}
-            color="#6366f1"
+            color="#efefef"
             trend={formatTrend(stats.trends.customers)}
           />
           <StatCard
             name="Total de Prendas"
             icon={BarChart2}
             value={stats.current.pieces}
-            color="#8B5CF6"
+            color="#efefef"
             trend={formatTrend(stats.trends.pieces)}
           />
         </motion.div>
