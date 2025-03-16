@@ -1,33 +1,69 @@
-// pages/DashboardPage.jsx
+// src/pages/DashboardPage.jsx
 import React, { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
-import { Link } from 'react-router-dom';
-import Header from '../components/common/Header';
-import StatCard from '../components/common/StatCard';
 import { Package, DollarSign, Users, BarChart2 } from 'lucide-react';
 
+// Componentes
+import Header from '../components/common/Header';
+import StatCard from '../components/common/StatCard';
+import WelcomeCard from '../components/dashboard/WelcomeCard';
+
 const DashboardPage = () => {
+  // Estado para almacenar estadísticas actuales y tendencias
   const [stats, setStats] = useState({
-    totalOrders: 0,
-    totalRevenue: 0,
-    totalCustomers: 0,
-    totalProducts: 0
+    current: {
+      orders: 0,
+      averageTicket: 0,
+      customers: 0,
+      pieces: 0,
+    },
+    trends: {
+      orders: null,
+      averageTicket: null,
+      customers: null,
+      pieces: null,
+    }
   });
 
-  // Ejemplo de fetch simulado (podrías ajustarlo a /api/dashboard, etc.)
+  // Estado para el período seleccionado: 'semana', 'mes', 'trimestre' o 'año'
+  const [period, setPeriod] = useState('año');
+
+  // Nombre del usuario (ajústalo según tu lógica de autenticación)
+  const [username, setUsername] = useState('Administrador');
+
+  // Función para formatear ticket promedio de forma segura
+  const formatMoney = (value) => {
+    const money = parseFloat(value);
+    return isNaN(money) ? '0.00' : money.toFixed(2);
+  };
+
+  // Función para formatear tendencia (porcentaje)
+  const formatTrend = (value) => {
+    return value !== null ? `${value.toFixed(2)}%` : 'N/A';
+  };
+
   useEffect(() => {
     const fetchDashboardStats = async () => {
       try {
-        // let res = await fetch('/api/dashboard');
-        // let data = await res.json();
-        // setStats(data);
-        
-        // Simulación de datos:
+        const response = await fetch(`/api/dashboardStats?period=${period}`);
+        if (!response.ok) {
+          throw new Error('Error al obtener datos del dashboard');
+        }
+        const data = await response.json();
+
         setStats({
-          totalOrders: 42,
-          totalRevenue: 1234.56,
-          totalCustomers: 18,
-          totalProducts: 87
+          current: {
+            orders: data.current.orders,
+            averageTicket: data.current.averageTicket,
+            customers: data.current.customers,
+            pieces: data.current.pieces,
+          },
+          trends: {
+            orders: data.trends.orders,
+            averageTicket: data.trends.averageTicket,
+            customers: data.trends.customers,
+            pieces: data.trends.pieces,
+          }
         });
       } catch (error) {
         console.error('Error al cargar stats del dashboard:', error);
@@ -35,14 +71,31 @@ const DashboardPage = () => {
     };
 
     fetchDashboardStats();
-  }, []);
+  }, [period]); // Se vuelve a ejecutar cada vez que cambia el período
 
   return (
     <div className="flex-1 overflow-auto relative z-10">
       <Header title="Dashboard General" />
 
       <main className="max-w-7xl mx-auto py-6 px-4 lg:px-8 xl:px-12">
-        
+        {/* Selector de período */}
+        <div className="mb-4 bg-gray-800 p-4">
+          <label htmlFor="period" className="mr-2 font-medium text-white">
+            Selecciona el período:
+          </label>
+          <select
+            id="period"
+            value={period}
+            onChange={(e) => setPeriod(e.target.value)}
+            className="border border-gray-600 rounded p-1 bg-gray-700 text-white"
+          >
+            <option value="semana">Semana</option>
+            <option value="mes">Mes</option>
+            <option value="trimestre">Trimestre</option>
+            <option value="año">Año</option>
+          </select>
+        </div>
+
         {/* Tarjetas de estadísticas */}
         <motion.div
           className="grid grid-cols-1 gap-5 sm:grid-cols-2 lg:grid-cols-4 mb-8"
@@ -53,81 +106,43 @@ const DashboardPage = () => {
           <StatCard
             name="Órdenes Totales"
             icon={Package}
-            value={stats.totalOrders}
+            value={stats.current.orders}
             color="#6366f1"
+            trend={formatTrend(stats.trends.orders)}
           />
           <StatCard
-            name="Ingresos Totales"
+            name="Ticket Promedio"
             icon={DollarSign}
-            value={`$${stats.totalRevenue.toFixed(2)}`}
+            type="Money"
+            value={formatMoney(stats.current.averageTicket)}
             color="#8B5CF6"
+            trend={formatTrend(stats.trends.averageTicket)}
           />
           <StatCard
-            name="Clientes"
+            name="Clientes Distintos"
             icon={Users}
-            value={stats.totalCustomers}
+            value={stats.current.customers}
             color="#6366f1"
+            trend={formatTrend(stats.trends.customers)}
           />
           <StatCard
-            name="Productos"
+            name="Total de Prendas"
             icon={BarChart2}
-            value={stats.totalProducts}
+            value={stats.current.pieces}
             color="#8B5CF6"
+            trend={formatTrend(stats.trends.pieces)}
           />
         </motion.div>
 
+        {/* Tarjeta de bienvenida */}
         <motion.div
-          className="grid grid-cols-1 gap-5 sm:grid-cols-1 lg:grid-cols-1 mb-8"
+          className="grid grid-cols-1 gap-5 mb-8"
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 1 }}
         >
-          <div>
-                <motion.div
-                  className='bg-800 bg-opacity-50 backdrop-blur-md overflow-hidden shadow-lg rounded-xl border border-gray-700'
-                  whileHover={{ y: -5, boxShadow: '0 25px 50px -12px rgba(0,0,0,0.5)' }}
-                >
-                  <div className='px-4 py-5 sm:p-6'>
-                    <span className='flex items-center text-sm font-xs text-gray-400'>
-                      
-                    </span>
-                    <p className='mt-1 text-xl  text-gray-100'>
-                     Bienvenidx hdtpm {name || "persona"}
-                    </p>
-                  </div>
-                </motion.div>
-              </div>
+          <WelcomeCard username={username} />
         </motion.div>
-
-        {/* Sección para navegar a otras páginas */}
-        <motion.div
-          className="bg-gray-800 bg-opacity-50 backdrop-blur-md shadow-lg rounded-xl p-6 border border-gray-700 mb-8"
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ delay: 0.2 }}
-        >
-          <h2 className="text-xl font-bold mb-4 text-white">Navegación Rápida</h2>
-          <nav className="flex flex-wrap gap-4">
-            <Link to="/inventory" className="text-blue-500 underline">
-              Inventario
-            </Link>
-            <Link to="/orders" className="text-blue-500 underline">
-              Órdenes
-            </Link>
-            <Link to="/upload" className="text-blue-500 underline">
-              Subir Excel
-            </Link>
-            <Link to="/report" className="text-blue-500 underline">
-              Reporte Diario
-            </Link>
-            <Link to="/customers" className="text-blue-500 underline">
-              Clientes
-            </Link>
-          </nav>
-        </motion.div>
-
-        {/* Aquí podrías agregar más secciones, tablas o gráficos, al estilo de InventoryPage o UploadPage */}
-        
       </main>
     </div>
   );

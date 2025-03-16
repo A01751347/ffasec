@@ -14,18 +14,22 @@ router.get('/', (req, res) => {
   }
 
   const query = `
-    SELECT 
-      description, 
-      process, 
-      MIN(price) AS price,
-      SUM(quantity) AS stock,
-      SUM(pieces) AS sales
-    FROM OrderDetails
-    WHERE description IS NOT NULL
-      AND process NOT LIKE '%spot on%'
+SELECT
+  od.description,
+  od.process,
+  (
+    SUM(od.price) / SUM(od.quantity)
+  ) AS price, -- Precio promedio unitario
+  SUM(od.quantity) AS stock,
+  SUM(od.pieces)   AS sales
+FROM OrderDetails od
+WHERE od.description IS NOT NULL
+  AND od.process NOT LIKE '%spot on%'
+  
       ${dateCondition}
-    GROUP BY description, process
-    ORDER BY sales DESC
+GROUP BY od.description, od.process
+ORDER BY sales DESC;
+
   `;
   
   db.query(query, params, (err, results) => {

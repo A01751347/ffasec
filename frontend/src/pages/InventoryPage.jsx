@@ -117,7 +117,8 @@ const InventoryPage = () => {
           <StatCard 
             name="Total" 
             icon={DollarSign} 
-            value={`$${Number(totalSales).toFixed(2)}`} 
+            type={'Money'}
+            value={`${Number(totalSales).toFixed(2)}`} 
             color="#8B5CF6" 
           />
         </motion.div>

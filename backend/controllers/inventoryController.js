@@ -1,3 +1,4 @@
+//inventoryController.js
 const db = require('../config/db');
 
 exports.addInventory = (req, res) => {

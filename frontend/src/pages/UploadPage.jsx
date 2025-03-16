@@ -26,7 +26,8 @@ const UploadPage = () => {
   return (
     <div className="flex-1 overflow-auto relative z-10">
       <Header title='Ventas' />
-      <main className='max-w-7xl mx-auto py-6 px-4 lg:px-8 xl:px12'>
+      <main className='max-w-7xl mx-auto py-6 px-4 lg:px-8 xl:px-12'>
+
         <motion.div className='grid grid-cols-1 gap-5 sm:grid-cols-2 lg:grid-cols-4 mb-8'
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
@@ -34,7 +35,8 @@ const UploadPage = () => {
             <StatCard 
               name='Ventas totales' 
               icon={Zap} 
-              value={`$${Number(stats.totalSales).toFixed(2)}`} 
+              type={'Money'}
+              value={`${stats.totalSales}`} 
               color='#6366f1'
             />
             <StatCard 
@@ -52,7 +54,13 @@ const UploadPage = () => {
             <StatCard 
               name='Cambio' 
               icon={BarChart2} 
-              value={`${stats.changePercentage !== null ? stats.changePercentage.toFixed(2) : 0}%`} 
+              type={'Percentage'}
+              value={
+                typeof stats.changePercentage === 'number'
+                  ? stats.changePercentage.toFixed(2)
+                  : 0
+              }
+              
               color='#8B5CF6'
             />
         </motion.div>
