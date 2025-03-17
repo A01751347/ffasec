@@ -2,7 +2,11 @@ import { motion } from "framer-motion";
 import { PieChart, Pie, Cell, Tooltip, ResponsiveContainer, Legend } from "recharts";
 import React, { useEffect, useState } from "react";
 
-const COLORS = ['#6366F1', '#8B5CD6', '#EC4899', '#10B981', '#F59E0B', '#EC4899'];
+const COLORS = ['#6366F1', // principal
+  '#818CF8', // un poco más claro
+  '#A5B4FC', // más claro
+  '#C7D2FE', // aún más claro
+  ];
 
 const CategoryChart = () => {
   const [data, setData] = useState([]);
@@ -21,7 +25,7 @@ const CategoryChart = () => {
       animate={{ opacity: 1, y: 0 }}
       transition={{ delay: 0.3 }}
     >
-      <h2 className='text-lg font-medium mb-4 text-gray-100'>Categorías (Piezas Totales)</h2>
+      <h2 className="text-lg font-normal mb-4" style={{color:'#E5E7EB'}}>Categorías (Piezas Totales)</h2>
       <div className='h-80'>
         <ResponsiveContainer width="100%" height="100%">
           <PieChart>

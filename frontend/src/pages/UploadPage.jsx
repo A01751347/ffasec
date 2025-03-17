@@ -30,7 +30,7 @@ const UploadPage = () => {
 
   // Ejemplo de datos para el segundo "StatCardLarge"
   const chartData2a = [
-    { name: 'Reurrentes', value: 150 },
+    { name: 'Recurrentes', value: 150 },
     { name: 'Nuevos', value: 120 },
     { name: 'Perdidos', value: 80 },
   ];
@@ -49,87 +49,92 @@ const UploadPage = () => {
 
       <main className='max-w-7xl mx-auto py-6 px-4 lg:px-8 xl:px-12'>
         {/* Ejemplo de tarjetas pequeñas */}
-        <motion.div className='grid grid-cols-1 gap-5 sm:grid-cols-2 lg:grid-cols-2 mb-8'
+        <motion.div className='grid grid-cols-1 gap-5 sm:grid-cols-2 lg:grid-cols-2 mb-6'
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 1 }}
         >
-          <motion.div className='grid grid-cols-1 gap-5 sm:grid-cols-2 lg:grid-cols-2 mb-8'
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 1 }}
-        >
-          <StatCard
-            name='Ventas totales'
-            icon={Zap}
-            type='Money'
-            trend={5.4}
-            value={`${stats.totalSales}`}
-            color='#efefef'
-          />
-          <StatCard
-            name='Nuevos clientes'
-            icon={Users}
-            trend={3.2}
-            value={stats.newClients}
-            color='#efefef'
-          />
-          <StatCard
-            name='Cambio'
-            icon={BarChart2}
-            type='Percentage'
-            trend={2.3}
-            value={
-              typeof stats.changePercentage === 'number'
-                ? stats.changePercentage.toFixed(2)
-                : 0
-            }
-            color='#efefef'
-          />
-          <StatCard
-            name='Cambio'
-            icon={BarChart2}
-            type='Percentage'
-            trend={2.3}
-            value={
-              typeof stats.changePercentage === 'number'
-                ? stats.changePercentage.toFixed(2)
-                : 0
-            }
-            color='#efefef'
-          />
+          <motion.div className='grid grid-cols-1 gap-5 sm:grid-cols-2 lg:grid-cols-2 '
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 1 }}
+          >
+            <StatCard
+              name='Ventas totales'
+              icon={Zap}
+              type='Money'
+              trend={5.4}
+              value={`${stats.totalSales}`}
+              color='#efefef'
+            />
+            <StatCard
+              name='Nuevos clientes'
+              icon={Users}
+              trend={3.2}
+              value={stats.newClients}
+              color='#efefef'
+            />
+            <StatCard
+              name='Cambio'
+              icon={BarChart2}
+              type='Percentage'
+              trend={2.3}
+              value={
+                typeof stats.changePercentage === 'number'
+                  ? stats.changePercentage.toFixed(2)
+                  : 0
+              }
+              color='#efefef'
+            />
+            <StatCard
+              name='Ordenes en Inventario'
+              icon={Shirt}
+              type=''
+              trend={3.7}
+              value={74
+              }
+              color='#efefef'
+            />
+          </motion.div>
+          {/* Tarjetas grandes con doble pastel y leyenda */}
+          <motion.div className='grid grid-cols-1 gap-5 sm:grid-cols-2 lg:grid-cols-2 '
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 1 }}
+          >
+            <StatCardLarge
+              name='Prendas Totales'
+              //icon={Shirt}
+              value={stats.totalPieces}
+              trend={2.1}
+              color='#efefef'
+              data1={chartData1a}
+              colors={['#6366F1', // principal
+                '#818CF8', // un poco más claro
+                '#A5B4FC', // más claro
+                '#C7D2FE', // aún más claro
+              ]}
+            />
+            <StatCardLarge
+              name='Clientes'
+              //icon={BarChart2}
+              type='Percentage'
+              trend={-1.5} // Ejemplo de tendencia negativa
+              value={
+                typeof stats.changePercentage === 'number'
+                  ? stats.changePercentage.toFixed(2)
+                  : 0
+              }
+              color='#efefef'
+              data1={chartData2a}
+              colors={['#6366F1', // principal
+                '#818CF8', // un poco más claro
+                '#A5B4FC', // más claro
+                '#C7D2FE', // aún más claro
+              ]}
+            />
+          </motion.div>
         </motion.div>
-        {/* Tarjetas grandes con doble pastel y leyenda */}
-        <motion.div className='grid grid-cols-1 gap-5 sm:grid-cols-2 lg:grid-cols-2 mb-8'
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 1 }}
-        >
-          <StatCardLarge
-            name='Prendas Totales'
-            //icon={Shirt}
-            value={stats.totalPieces}
-            trend={2.1}
-            color='#efefef'
-            data1={chartData1a}
-            colors={['#154e94', '#1d9bc0', '#20dad8', '#92c2e7']}
-          />
-          <StatCardLarge
-            name='Clientes'
-            //icon={BarChart2}
-            type='Percentage'
-            trend={-1.5} // Ejemplo de tendencia negativa
-            value={
-              typeof stats.changePercentage === 'number'
-                ? stats.changePercentage.toFixed(2)
-                : 0
-            }
-            color='#efefef'
-            data1={chartData2a}
-            colors={['#d1526a', '#ff8498',  '#ffbec7']}
-          />
-        </motion.div>
-</motion.div>
 
         <div className='grid grid-cols-1 lg:grid-cols-2 gap-8'>
           <SalesOverviewChart />

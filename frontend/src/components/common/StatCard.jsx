@@ -24,7 +24,7 @@ const StatCard = ({ name, icon: Icon, type, value, color, trend }) => {
 
   // Determina el color del trend según si es negativo o positivo
   const trendColor =
-    trend && trend.toString().includes('-') ? 'text-red-500' : 'text-green-500';
+    trend && trend.toString().includes('-') ? '#EF4444' : '#22C55E';
 
   return (
     <motion.div
@@ -38,15 +38,17 @@ const StatCard = ({ name, icon: Icon, type, value, color, trend }) => {
 
       {/* Contenido principal */}
       <div className="px-4 py-5 sm:p-6">
-        <span className="block text-md font-normal text-gray-200">
+        <span className="block text-md font-normal"  style={{color:'#E5E7EB'
+        }}>
           {name}
         </span>
-        <p className="mt-4 text-4xl font-semibold text-gray-100">
+        <p className="mt-4 text-4xl font-semibold" style={{color:'#E0E7FF'
+        }}>
           {formattedValue}
         </p>
         {trend && (
           <div className="flex gap-2 ml-2 mt-6">
-            <span className={`text-sm font-medium ${trendColor}`}>
+            <span className={'text-sm font-medium'} style={{color:`${trendColor}`}}>
               {`${trend}%`}
             </span>
             <p className="text-xs text-gray-400 p-1">desde el mes pasado</p>

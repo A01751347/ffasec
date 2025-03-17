@@ -29,7 +29,7 @@ const SalesOverviewChart = () => {
       animate={{ opacity: 1, y: 0 }}
       transition={{ duration: 0.2 }}
     >
-      <h2 className="text-lg font-medium mb-4 text-gray-100">Resumen de Ventas por Mes</h2>
+      <h2 className="text-lg font-normal mb-4" style={{color:'#E5E7EB'}}>Resumen de Ventas por Mes</h2>
       <div className="h-80">
         <ResponsiveContainer width="100%" height="100%">
           <LineChart data={salesData}>
@@ -37,13 +37,12 @@ const SalesOverviewChart = () => {
             <XAxis dataKey="name" stroke="#9CA3AF" />
             <YAxis stroke="#9CA3AF" />
             <Tooltip contentStyle={{ backgroundColor: "rgba(31,41,55,0.8)", borderColor: "#4B5563" }} itemStyle={{ color: "#E5E7EB" }} />
-            <Legend />
-            <Line type="monotone" dataKey="sales" stroke="#6366F1" strokeWidth={3} dot={{ fill: "#6366F1", strokeWidth: 2, r: 4 }} activeDot={{ r: 4, strokeWidth: 2 }} />
+   
+            <Line type="monotone" dataKey="sales" stroke="#6366F1" strokeWidth={3} dot={{ fill: "#C7D2FE", strokeWidth: 2, r: 4 }} activeDot={{ r: 4, strokeWidth: 2 }} />
           </LineChart>
         </ResponsiveContainer>
       </div>
     </motion.div>
   );
 };
-
 export default SalesOverviewChart;

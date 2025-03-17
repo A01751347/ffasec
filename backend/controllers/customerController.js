@@ -1,3 +1,4 @@
+// customerController.js
 const db = require('../config/db');
 
 exports.getCustomersByName = (req, res) => {

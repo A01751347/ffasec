@@ -4,14 +4,18 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { Link } from 'react-router-dom';
 
 const SIDEBAR_ITEMS = [
-  { name: 'Inicio', icon: Home, color: '#8AD5F6', path: '/' },
-  { name: 'Datos', icon: BarChart2, color: '#8AD5F6', path: '/upload' },
-  { name: 'Inventario', icon: ShoppingBag, color: '#8AD5F6', path: '/inventory' },
-  { name: 'Reporte Diario', icon: DollarSign, color: '#8AD5F6', path: '/report' },
-  { name: 'Órdenes', icon: Settings, color: '#8AD5F6', path: '/orders' },
-  { name: 'Clientes', icon: PersonStanding, color: '#8AD5F6', path: '/customers' },
+  { name: 'Inicio', icon: Home, color: '#818CF8', path: '/' },
+  { name: 'Datos', icon: BarChart2, color: '#818CF8', path: '/upload' },
+  { name: 'Inventario', icon: ShoppingBag, color: '#818CF8', path: '/inventory' },
+  { name: 'Reporte Diario', icon: DollarSign, color: '#818CF8', path: '/report' },
+  { name: 'Órdenes', icon: Settings, color: '#818CF8', path: '/orders' },
+  { name: 'Clientes', icon: PersonStanding, color: '#818CF8', path: '/customers' },
 ];
-
+// colors={[ '#6366F1', // principal
+//   '#818CF8', // un poco más claro
+//   '#A5B4FC', // más claro
+//   '#C7D2FE', // aún más claro
+//   ]}
 const Sidebar = () => {
   const [isSidebarOpen, setIsSidebarOpen] = useState(true);
 
@@ -43,7 +47,7 @@ const Sidebar = () => {
                   {isSidebarOpen && (
                      <motion.span
                      className="ml-4 whitespace-nowrap overflow-hidden"
-                     style={{ color: '#6366f1' }} // ✅ Agregando color dinámico al texto
+                     style={{ color: '#C7D2FE' }} // ✅ Agregando color dinámico al texto
                      initial={{ opacity: 0, width: 0 }}
                      animate={{ opacity: 1, width: 'auto' }}
                      exit={{ opacity: 0, width: 0 }}
