@@ -28,6 +28,9 @@ const DashboardPage = () => {
   // Estado para el período seleccionado: 'semana', 'mes', 'trimestre' o 'año'
   const [period, setPeriod] = useState('año');
 
+  // Estado para indicar si los datos se están cargando
+  const [loading, setLoading] = useState(true);
+
   // Nombre del usuario (ajústalo según tu lógica de autenticación)
   const [username, setUsername] = useState('Administrador');
 
@@ -39,11 +42,12 @@ const DashboardPage = () => {
 
   // Función para formatear tendencia (porcentaje)
   const formatTrend = (value) => {
-    return value !== null ? `${value.toFixed(2)}%` : 'N/A';
+    return value !== null ? `${value.toFixed(2)}` : 'N/A';
   };
 
   useEffect(() => {
     const fetchDashboardStats = async () => {
+      setLoading(true);
       try {
         const response = await fetch(`/api/dashboardStats?period=${period}`);
         if (!response.ok) {
@@ -67,6 +71,8 @@ const DashboardPage = () => {
         });
       } catch (error) {
         console.error('Error al cargar stats del dashboard:', error);
+      } finally {
+        setLoading(false);
       }
     };
 
@@ -109,6 +115,8 @@ const DashboardPage = () => {
             value={stats.current.orders}
             color="#efefef"
             trend={formatTrend(stats.trends.orders)}
+            time={period}
+            isLoading={loading}
           />
           <StatCard
             name="Ticket Promedio"
@@ -117,6 +125,8 @@ const DashboardPage = () => {
             value={formatMoney(stats.current.averageTicket)}
             color="#efefef"
             trend={formatTrend(stats.trends.averageTicket)}
+            time={period}
+            isLoading={loading}
           />
           <StatCard
             name="Clientes Distintos"
@@ -124,6 +134,8 @@ const DashboardPage = () => {
             value={stats.current.customers}
             color="#efefef"
             trend={formatTrend(stats.trends.customers)}
+            time={period}
+            isLoading={loading}
           />
           <StatCard
             name="Total de Prendas"
@@ -131,6 +143,8 @@ const DashboardPage = () => {
             value={stats.current.pieces}
             color="#efefef"
             trend={formatTrend(stats.trends.pieces)}
+            time={period}
+            isLoading={loading}
           />
         </motion.div>
 

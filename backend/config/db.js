@@ -4,8 +4,8 @@ const connection = mysql.createConnection({
   host: 'localhost',
   user: 'root',
   password: '', 
-  // user: 'my_app_user',
-  // password: 'MiContraseñaSegura', 
+   //user: 'my_app_user',
+   //password: 'MiContraseñaSegura', 
   database: 'facturas_db'
 });
 connection.connect(err => {
