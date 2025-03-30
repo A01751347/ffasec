@@ -5,21 +5,139 @@ const { convertDate } = require('../utils/dateUtils');
 const { calculatePieces } = require('../utils/calculatePieces');
 const fs = require('fs');
 const path = require('path');
+const mime = require('mime-types'); // Añadir esta dependencia para validación de tipos MIME
 
-exports.uploadExcel = (req, res) => {
+/**
+ * Verifica si el archivo es un Excel válido
+ * @param {string} filePath - Ruta del archivo
+ * @returns {boolean} - true si es válido, false si no
+ */
+const isValidExcelFile = (filePath) => {
+  try {
+    // Verificar el tipo MIME
+    const mimeType = mime.lookup(filePath);
+    const validMimeTypes = [
+      'application/vnd.ms-excel',
+      'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+      'application/vnd.oasis.opendocument.spreadsheet'
+    ];
+    
+    if (!validMimeTypes.includes(mimeType)) {
+      return false;
+    }
+    
+    // Intentar leer el archivo como Excel
+    const workbook = xlsx.readFile(filePath, { cellDates: true });
+    return workbook && workbook.SheetNames && workbook.SheetNames.length > 0;
+  } catch (error) {
+    console.error("Error al validar archivo Excel:", error);
+    return false;
+  }
+};
+
+/**
+ * Procesa una orden a partir de los datos del Excel
+ * @param {Object} orderHeader - Datos de la cabecera de la orden
+ * @param {Array} detailsRows - Filas de detalles de la orden
+ * @returns {Promise} - Promesa que resuelve cuando se ha procesado la orden
+ */
+const processOrder = (orderHeader, detailsRows) => {
+  return new Promise((resolve, reject) => {
+    const orderDate = convertDate(orderHeader['fecha']);
+    
+    // Usar transacción para asegurar la integridad de los datos
+    db.beginTransaction(async (transactionErr) => {
+      if (transactionErr) {
+        return reject(transactionErr);
+      }
+      
+      try {
+        // Insertar cliente
+        await new Promise((resolveCustomer, rejectCustomer) => {
+          db.query(
+            `INSERT IGNORE INTO Customers (id, name) VALUES (?, ?)`,
+            [orderHeader['idcliente'], orderHeader['clientebis']],
+            (customerErr) => {
+              if (customerErr) {
+                return rejectCustomer(customerErr);
+              }
+              resolveCustomer();
+            }
+          );
+        });
+        
+        // Insertar orden
+        await new Promise((resolveOrder, rejectOrder) => {
+          db.query(
+            `INSERT INTO Orders (number, ticket, total, date, id) VALUES (?, ?, ?, ?, ?)`,
+            [orderHeader['num'], orderHeader['numero'], orderHeader['total'], orderDate, orderHeader['idcliente']],
+            (orderErr) => {
+              if (orderErr) {
+                return rejectOrder(orderErr);
+              }
+              resolveOrder();
+            }
+          );
+        });
+        
+        // Insertar detalles
+        for (const row of detailsRows) {
+          const pieces = calculatePieces(row['descripcio'], row['cantidad']);
+          
+          await new Promise((resolveDetail, rejectDetail) => {
+            db.query(
+              `INSERT INTO OrderDetails (number, process, description, pieces, quantity, date, price) 
+               VALUES (?, ?, ?, ?, ?, ?, ?)`,
+              [row['num'], row['proceso'], row['descripcio'], pieces, row['cantidad'], orderDate, row['nimplinea']],
+              (detailErr) => {
+                if (detailErr) {
+                  return rejectDetail(detailErr);
+                }
+                resolveDetail();
+              }
+            );
+          });
+        }
+        
+        // Confirmar transacción
+        db.commit((commitErr) => {
+          if (commitErr) {
+            db.rollback(() => reject(commitErr));
+            return;
+          }
+          resolve();
+        });
+      } catch (error) {
+        db.rollback(() => reject(error));
+      }
+    });
+  });
+};
+
+exports.uploadExcel = async (req, res) => {
   if (!req.file) {
-    console.error("No se ha recibido ningún archivo.");
     return res.status(400).json({ error: 'No se ha subido ningún archivo.' });
   }
   
+  const filePath = req.file.path;
+  
+  // Verificar que el archivo es un Excel válido
+  if (!isValidExcelFile(filePath)) {
+    // Eliminar el archivo si no es válido
+    fs.unlink(filePath, () => {});
+    return res.status(400).json({ error: 'El archivo no es un Excel válido.' });
+  }
+  
   try {
-    const workbook = xlsx.readFile(req.file.path);
+    const workbook = xlsx.readFile(filePath, { cellDates: true });
     const sheetName = workbook.SheetNames[0];
     const worksheet = workbook.Sheets[sheetName];
     const jsonData = xlsx.utils.sheet_to_json(worksheet, { defval: null });
     
     // Verificar si hay datos
     if (!jsonData || jsonData.length === 0) {
+      // Limpiar archivo
+      fs.unlink(filePath, () => {});
       return res.status(400).json({ error: 'El archivo no contiene datos válidos.' });
     }
     
@@ -35,111 +153,51 @@ exports.uploadExcel = (req, res) => {
     let successCount = 0;
     const totalOrders = Object.keys(ordersGrouped).length;
     const errors = [];
+    const processedOrders = [];
     
     // Procesar cada grupo
     for (const orderNum in ordersGrouped) {
       try {
         const group = ordersGrouped[orderNum];
         const orderHeader = group[0];
-        const orderDate = convertDate(orderHeader['fecha']);
+        const detailsRows = group.length > 2 ? group.slice(1, -1) : group.slice(1);
         
-        // Insertar en Customers
-        db.query(
-          `INSERT IGNORE INTO Customers (id, name) VALUES (?, ?)`,
-          [orderHeader['idcliente'], orderHeader['clientebis']],
-          (customerErr) => {
-            if (customerErr) {
-              errors.push(`Error al insertar cliente para la orden ${orderNum}: ${customerErr.message}`);
-              return;
-            }
-            
-            // Insertar en Orders
-            db.query(
-              `INSERT INTO Orders (number, ticket, total, date, id) VALUES (?, ?, ?, ?, ?)`,
-              [orderHeader['num'], orderHeader['numero'], orderHeader['total'], orderDate, orderHeader['idcliente']],
-              (orderErr) => {
-                if (orderErr) {
-                  errors.push(`Error al insertar orden ${orderNum}: ${orderErr.message}`);
-                  return;
-                }
-                
-                // Insertar en OrderDetails (incluyendo la fecha)
-                const detailsRows = group.length > 2 ? group.slice(1, -1) : group.slice(1);
-                let detailsProcessed = 0;
-                
-                detailsRows.forEach(row => {
-                  const pieces = calculatePieces(row['descripcio'], row['cantidad']);
-                  
-                  db.query(
-                    `INSERT INTO OrderDetails (number, process, description, pieces, quantity, date, price) 
-                     VALUES (?, ?, ?, ?, ?, ?, ?)`,
-                    [row['num'], row['proceso'], row['descripcio'], pieces, row['cantidad'], orderDate, row['nimplinea']],
-                    (detailErr) => {
-                      if (detailErr) {
-                        errors.push(`Error al insertar detalle para la orden ${orderNum}: ${detailErr.message}`);
-                      }
-                      
-                      detailsProcessed++;
-                      
-                      // Si todos los detalles fueron procesados, incrementamos el contador de órdenes exitosas
-                      if (detailsProcessed === detailsRows.length) {
-                        successCount++;
-                        
-                        // Si todas las órdenes fueron procesadas, enviamos la respuesta
-                        if (successCount + errors.length === totalOrders) {
-                          const response = {
-                            message: `Archivo procesado: ${successCount} órdenes migradas correctamente.`,
-                            total: totalOrders,
-                            success: successCount
-                          };
-                          
-                          if (errors.length > 0) {
-                            response.errors = errors;
-                            response.message += ` Se encontraron ${errors.length} errores.`;
-                          }
-                          
-                          res.json(response);
-                        }
-                      }
-                    }
-                  );
-                });
-                
-                // Si no hay detalles para esta orden
-                if (detailsRows.length === 0) {
-                  successCount++;
-                  if (successCount + errors.length === totalOrders) {
-                    const response = {
-                      message: `Archivo procesado: ${successCount} órdenes migradas correctamente.`,
-                      total: totalOrders,
-                      success: successCount
-                    };
-                    
-                    if (errors.length > 0) {
-                      response.errors = errors;
-                      response.message += ` Se encontraron ${errors.length} errores.`;
-                    }
-                    
-                    res.json(response);
-                  }
-                }
-              }
-            );
-          }
-        );
-      } catch (groupError) {
-        errors.push(`Error al procesar el grupo ${orderNum}: ${groupError.message}`);
+        await processOrder(orderHeader, detailsRows);
+        
+        // Registrar orden procesada
+        processedOrders.push(orderNum);
+        successCount++;
+      } catch (error) {
+        errors.push(`Error al procesar la orden ${orderNum}: ${error.message}`);
       }
     }
     
-    // Si no hay órdenes para procesar
-    if (totalOrders === 0) {
-      res.json({ message: 'El archivo no contiene órdenes para procesar.' });
+    // Limpiar el archivo después de procesarlo
+    fs.unlink(filePath, (err) => {
+      if (err) console.error("Error al eliminar archivo temporal:", err);
+    });
+    
+    // Preparar respuesta
+    const response = {
+      message: `Archivo procesado: ${successCount} órdenes migradas correctamente.`,
+      total: totalOrders,
+      success: successCount,
+      processedOrders
+    };
+    
+    if (errors.length > 0) {
+      response.errors = errors;
+      response.message += ` Se encontraron ${errors.length} errores.`;
     }
     
+    return res.json(response);
+    
   } catch (error) {
+    // Limpiar el archivo en caso de error
+    fs.unlink(filePath, () => {});
+    
     console.error('Error al procesar el archivo Excel:', error);
-    res.status(500).json({ 
+    return res.status(500).json({ 
       error: 'Error al procesar el archivo Excel', 
       details: error.message 
     });

@@ -1,5 +1,5 @@
 // src/pages/DashboardPage.jsx
-import React, { useState } from 'react';
+import React, { useState, useMemo } from 'react';
 import { motion } from 'framer-motion';
 import { Package, DollarSign, Users, BarChart2, Calendar, TrendingUp } from 'lucide-react';
 
@@ -34,23 +34,72 @@ const DashboardPage = () => {
     { value: 'año', label: 'Último año' },
   ];
 
-  // Función para formatear ticket promedio de forma segura
+  // Función para formatear valores monetarios de forma segura
   const formatMoney = (value) => {
-    const money = parseFloat(value);
-    return isNaN(money) ? '0.00' : money.toFixed(2);
+    // Si el valor es undefined, null o no es un número, devolver "0.00"
+    if (value === undefined || value === null || isNaN(parseFloat(value))) {
+      return '0.00';
+    }
+    
+    // Convertir a número y aplicar formateo
+    const numValue = parseFloat(value);
+    return numValue.toFixed(2);
   };
 
-  // Función para formatear tendencia (porcentaje)
- // Función para formatear tendencia (porcentaje)
-const formatTrend = (value) => {
-  // Verificar que value no sea undefined o null
-  if (value === undefined || value === null) {
-    return 'N/A';
-  }
+  // Función para formatear tendencia (porcentaje) de forma segura
+  const formatTrend = (value) => {
+    // Si el valor es undefined, null o no es un número, devolver "0.00"
+    if (value === undefined || value === null) {
+      return '0.00';
+    }
+    
+    // Si es un string, intentar convertirlo a número
+    if (typeof value === 'string') {
+      const parsedValue = parseFloat(value);
+      if (isNaN(parsedValue)) {
+        return '0.00';
+      }
+      return parsedValue.toFixed(2);
+    }
+    
+    // Si es un número, aplicar formateo
+    if (typeof value === 'number') {
+      return value.toFixed(2);
+    }
+    
+    // En cualquier otro caso, devolver "0.00"
+    return '0.00';
+  };
+
+  // Extraer y validar datos para las tarjetas
+  const cardData = useMemo(() => {
+    if (!stats || !stats.current) {
+      return {
+        orders: 0,
+        averageTicket: 0,
+        customers: 0,
+        pieces: 0,
+        ordersTrend: 0,
+        averageTicketTrend: 0,
+        customersTrend: 0,
+        piecesTrend: 0
+      };
+    }
+    
+    const { current = {}, trends = {} } = stats;
+    
+    return {
+      orders: current.orders || 0,
+      averageTicket: current.averageTicket || 0,
+      customers: current.customers || 0,
+      pieces: current.pieces || 0,
+      ordersTrend: trends.orders || 0,
+      averageTicketTrend: trends.averageTicket || 0,
+      customersTrend: trends.customers || 0,
+      piecesTrend: trends.pieces || 0
+    };
+  }, [stats]);
   
-  // Si es un número, aplicar toFixed
-  return typeof value === 'number' ? value.toFixed(2) : 'N/A';
-};
   // Manejar cambio de período
   const handlePeriodChange = (e) => {
     setPeriod(e.target.value);
@@ -124,9 +173,9 @@ const formatTrend = (value) => {
             <StatCard
               name="Órdenes Totales"
               icon={Package}
-              value={stats?.current?.orders || 0}
+              value={cardData.orders}
               color="#efefef"
-              trend={formatTrend(stats?.trends?.orders)}
+              trend={formatTrend(cardData.ordersTrend)}
               time={period}
               isLoading={isLoading}
             />
@@ -134,27 +183,27 @@ const formatTrend = (value) => {
               name="Ticket Promedio"
               icon={DollarSign}
               type="Money"
-              value={formatMoney(stats?.current?.averageTicket)}
+              value={formatMoney(cardData.averageTicket)}
               color="#efefef"
-              trend={formatTrend(stats?.trends?.averageTicket)}
+              trend={formatTrend(cardData.averageTicketTrend)}
               time={period}
               isLoading={isLoading}
             />
             <StatCard
               name="Clientes Distintos"
               icon={Users}
-              value={stats?.current?.customers || 0}
+              value={cardData.customers}
               color="#efefef"
-              trend={formatTrend(stats?.trends?.customers)}
+              trend={formatTrend(cardData.customersTrend)}
               time={period}
               isLoading={isLoading}
             />
             <StatCard
               name="Total de Prendas"
               icon={BarChart2}
-              value={stats?.current?.pieces || 0}
+              value={cardData.pieces}
               color="#efefef"
-              trend={formatTrend(stats?.trends?.pieces)}
+              trend={formatTrend(cardData.piecesTrend)}
               time={period}
               isLoading={isLoading}
             />

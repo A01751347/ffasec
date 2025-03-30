@@ -1,145 +1,99 @@
 // backend/controllers/salesController.js
-const mysql = require('mysql2/promise');
 require('dotenv').config();
-
-// Función para obtener conexión a la base de datos
-const getConnection = async () => {
-  return await mysql.createConnection({
-    host: process.env.DB_HOST || 'localhost',
-    user: process.env.DB_USER || 'root',
-    password: process.env.DB_PASSWORD || '',
-    database: process.env.DB_DATABASE || ''
-  });
-};
+const db = require('../config/db'); // Usar la conexión compartida
+const { validateSaleData } = require('../validations/salesValidation'); // Importar validaciones
 
 /**
  * Crear una nueva venta
  */
 exports.createSale = async (req, res) => {
-  let connection;
+  let connection = null;
   
   try {
-    console.log("Recibidos datos de venta:", JSON.stringify(req.body, null, 2));
+    // Validar los datos de la venta
+    const { valid, errors } = validateSaleData(req.body);
+    if (!valid) {
+      return res.status(400).json({ error: 'Datos inválidos', details: errors });
+    }
     
+    // Desestructurar los datos validados
     const { items, total, paymentMethod, cashReceived, change, date, customerName } = req.body;
-    
-    // Validación de datos
-    if (!items || !Array.isArray(items) || items.length === 0) {
-      return res.status(400).json({ error: 'Se requieren productos para la venta' });
-    }
-
-    if (total === undefined || isNaN(parseFloat(total)) || parseFloat(total) < 0) {
-      return res.status(400).json({ error: 'El total de la venta es inválido' });
-    }
-
-    if (!paymentMethod || (paymentMethod !== 'cash' && paymentMethod !== 'card')) {
-      return res.status(400).json({ error: 'El método de pago debe ser efectivo o tarjeta' });
-    }
-
-    // Crear conexión y comenzar transacción
-    try {
-      connection = await getConnection();
-      await connection.beginTransaction();
-      console.log("Transacción iniciada");
-    } catch (dbError) {
-      console.error("Error al conectar a la base de datos:", dbError);
-      return res.status(500).json({ error: 'Error de conexión a la base de datos' });
-    }
     
     // Formatear fecha correctamente para MySQL
     const formattedDate = date ? 
       new Date(date).toISOString().slice(0, 19).replace('T', ' ') : 
       new Date().toISOString().slice(0, 19).replace('T', ' ');
     
-    try {
-      // Insertar venta principal
-      const [result] = await connection.execute(
-        `INSERT INTO Sales (date, total, payment_method, cash_received, change_given, customer_name) 
+    // Iniciar transacción
+    connection = await db.promise().getConnection();
+    await connection.beginTransaction();
+    
+    // Insertar venta principal
+    const [result] = await connection.execute(
+      `INSERT INTO Sales (date, total, payment_method, cash_received, change_given, customer_name) 
+       VALUES (?, ?, ?, ?, ?, ?)`,
+      [
+        formattedDate,
+        parseFloat(total) || 0,
+        paymentMethod,
+        paymentMethod === 'cash' ? (parseFloat(cashReceived) || 0) : null,
+        paymentMethod === 'cash' ? (parseFloat(change) || 0) : null,
+        customerName || 'Cliente General'
+      ]
+    );
+    
+    const saleId = result.insertId;
+    
+    // Insertar items de venta
+    for (const item of items) {
+      await connection.execute(
+        `INSERT INTO SaleItems (sale_id, product_name, product_category, price, quantity, subtotal) 
          VALUES (?, ?, ?, ?, ?, ?)`,
         [
-          formattedDate,
-          parseFloat(total) || 0,
-          paymentMethod,
-          paymentMethod === 'cash' ? (parseFloat(cashReceived) || 0) : null,
-          paymentMethod === 'cash' ? (parseFloat(change) || 0) : null,
-          customerName || 'Cliente General'
+          saleId,
+          item.name,
+          item.category || null,
+          parseFloat(item.price) || 0,
+          parseInt(item.quantity) || 1,
+          parseFloat(item.price) * parseInt(item.quantity)
         ]
       );
-      
-      const saleId = result.insertId;
-      console.log(`Venta insertada con ID: ${saleId}`);
-      
-      // Insertar items de venta
-      for (const item of items) {
-        // Validar cada item
-        if (!item.name) {
-          await connection.rollback();
-          return res.status(400).json({ error: 'Todos los productos deben tener un nombre' });
-        }
-        
-        const itemPrice = parseFloat(item.price) || 0;
-        const itemQuantity = parseInt(item.quantity) || 1;
-        const subtotal = itemPrice * itemQuantity;
-        
-        console.log(`Insertando item: ${item.name}, precio: ${itemPrice}, cantidad: ${itemQuantity}`);
-        
-        await connection.execute(
-          `INSERT INTO SaleItems (sale_id, product_name, product_category, price, quantity, subtotal) 
-           VALUES (?, ?, ?, ?, ?, ?)`,
-          [
-            saleId,
-            item.name,
-            item.category || null,
-            itemPrice,
-            itemQuantity,
-            subtotal
-          ]
-        );
-      }
-      
-      await connection.commit();
-      console.log("Transacción completada");
-      
-      res.status(201).json({ 
-        message: 'Venta procesada con éxito',
-        saleId,
-        total: parseFloat(total),
-        items: items.length,
-        customerName: customerName || 'Cliente General',
-        date: formattedDate
-      });
-    } catch (dbError) {
-      // Error específico de la base de datos
-      console.error("Error en operación de base de datos:", dbError);
-      if (connection) {
-        await connection.rollback();
-        console.log("Transacción revertida");
-      }
-      return res.status(500).json({ 
-        error: 'Error al guardar datos en la base de datos', 
-        details: dbError.message
-      });
     }
+    
+    // Confirmar transacción
+    await connection.commit();
+    
+    // Responder éxito
+    res.status(201).json({ 
+      message: 'Venta procesada con éxito',
+      saleId,
+      total: parseFloat(total),
+      items: items.length,
+      customerName: customerName || 'Cliente General',
+      date: formattedDate
+    });
   } catch (error) {
-    // Error general
-    console.error('Error general al procesar la venta:', error);
+    // Revertir transacción en caso de error
     if (connection) {
       try {
         await connection.rollback();
-      } catch (e) {
-        console.error("Error adicional al hacer rollback:", e);
+      } catch (rollbackError) {
+        console.error("Error adicional al hacer rollback:", rollbackError);
       }
     }
+    
+    console.error('Error al procesar la venta:', error);
     res.status(500).json({ 
       error: 'Error al procesar la venta',
       details: error.message
     });
   } finally {
+    // Liberar la conexión en cualquier caso
     if (connection) {
       try {
-        await connection.end();
-      } catch (e) {
-        console.error("Error al cerrar la conexión:", e);
+        connection.release();
+      } catch (releaseError) {
+        console.error("Error al liberar la conexión:", releaseError);
       }
     }
   }
@@ -149,8 +103,6 @@ exports.createSale = async (req, res) => {
  * Obtener todas las ventas
  */
 exports.getAllSales = async (req, res) => {
-  let connection;
-  
   try {
     const { startDate, endDate, customerName } = req.query;
     
@@ -182,18 +134,12 @@ exports.getAllSales = async (req, res) => {
     
     query += ` ORDER BY date DESC`;
     
-    connection = await getConnection();
-    const [sales] = await connection.execute(query, params);
+    const [sales] = await db.promise().query(query, params);
     
     res.json(sales);
-    
   } catch (error) {
     console.error('Error al obtener ventas:', error);
     res.status(500).json({ error: error.message });
-  } finally {
-    if (connection) {
-      await connection.end();
-    }
   }
 };
 
@@ -201,15 +147,16 @@ exports.getAllSales = async (req, res) => {
  * Obtener detalles de una venta por ID
  */
 exports.getSaleById = async (req, res) => {
-  let connection;
-  
   try {
     const { id } = req.params;
     
-    connection = await getConnection();
+    // Validar ID
+    if (!id || isNaN(parseInt(id))) {
+      return res.status(400).json({ error: 'ID de venta inválido' });
+    }
     
     // Obtener información de la venta
-    const [sales] = await connection.execute(
+    const [sales] = await db.promise().query(
       `SELECT * FROM Sales WHERE sale_id = ?`,
       [id]
     );
@@ -221,7 +168,7 @@ exports.getSaleById = async (req, res) => {
     const sale = sales[0];
     
     // Obtener items de la venta
-    const [items] = await connection.execute(
+    const [items] = await db.promise().query(
       `SELECT * FROM SaleItems WHERE sale_id = ?`,
       [id]
     );
@@ -233,14 +180,9 @@ exports.getSaleById = async (req, res) => {
     };
     
     res.json(saleWithItems);
-    
   } catch (error) {
     console.error('Error al obtener venta:', error);
     res.status(500).json({ error: error.message });
-  } finally {
-    if (connection) {
-      await connection.end();
-    }
   }
 };
 
@@ -248,8 +190,6 @@ exports.getSaleById = async (req, res) => {
  * Obtener estadísticas de ventas
  */
 exports.getSalesStats = async (req, res) => {
-  let connection;
-  
   try {
     const { period, startDate, endDate } = req.query;
     let dateFilter = '';
@@ -287,10 +227,8 @@ exports.getSalesStats = async (req, res) => {
       }
     }
     
-    connection = await getConnection();
-    
     // Estadísticas totales
-    const [totalStats] = await connection.execute(`
+    const [totalStats] = await db.promise().query(`
       SELECT 
         COUNT(*) as total_sales,
         SUM(total) as revenue,
@@ -302,7 +240,7 @@ exports.getSalesStats = async (req, res) => {
     `, params);
     
     // Estadísticas por método de pago
-    const [paymentStats] = await connection.execute(`
+    const [paymentStats] = await db.promise().query(`
       SELECT 
         payment_method,
         COUNT(*) as count,
@@ -313,7 +251,7 @@ exports.getSalesStats = async (req, res) => {
     `, params);
     
     // Productos más vendidos
-    const [topProducts] = await connection.execute(`
+    const [topProducts] = await db.promise().query(`
       SELECT 
         product_name,
         product_category,
@@ -328,13 +266,13 @@ exports.getSalesStats = async (req, res) => {
     `, params);
     
     // Clientes principales
-    const [topCustomers] = await connection.execute(`
+    const [topCustomers] = await db.promise().query(`
       SELECT 
         customer_name,
         COUNT(*) as visits,
         SUM(total) as total_spent
       FROM Sales
-      WHERE ${dateFilter} AND customer_name IS NOT NULL
+      WHERE ${dateFilter} AND customer_name IS NOT NULL AND customer_name != 'Cliente General'
       GROUP BY customer_name
       ORDER BY total_spent DESC
       LIMIT 5
@@ -346,15 +284,8 @@ exports.getSalesStats = async (req, res) => {
       top_products: topProducts,
       top_customers: topCustomers
     });
-    
   } catch (error) {
     console.error('Error al obtener estadísticas:', error);
     res.status(500).json({ error: error.message });
-  } finally {
-    if (connection) {
-      await connection.end();
-    }
   }
 };
-
-

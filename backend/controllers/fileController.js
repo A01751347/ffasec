@@ -1,11 +1,27 @@
 // fileController.js
 const fs = require('fs');
 const path = require('path');
+const crypto = require('crypto');
 
-// Función para sanitizar nombres de archivo y prevenir path traversal
+// Función mejorada para sanitizar nombres de archivo y prevenir path traversal
 const sanitizeFileName = (fileName) => {
-  // Eliminar caracteres no seguros y obtener solo el nombre base del archivo
-  return path.basename(fileName).replace(/[^a-zA-Z0-9_.-]/g, '');
+  if (!fileName) return '';
+  
+  // Obtener solo el nombre base del archivo
+  const baseName = path.basename(fileName);
+  
+  // Eliminar caracteres no seguros y limitar la longitud
+  const sanitized = baseName
+    .replace(/[^a-zA-Z0-9_.-]/g, '')
+    .substring(0, 255);
+    
+  // Si después de sanitizar queda vacío, generar un nombre aleatorio
+  if (!sanitized) {
+    const randomPart = crypto.randomBytes(8).toString('hex');
+    return `file_${randomPart}`;
+  }
+  
+  return sanitized;
 };
 
 /**
@@ -38,16 +54,18 @@ exports.downloadFile = (req, res) => {
   const filePath = path.join(__dirname, '..', 'uploads', fileName);
 
   // Verificamos si el archivo existe
-  if (!fs.existsSync(filePath)) {
-    return res.status(404).json({ error: 'Archivo no encontrado' });
-  }
-
-  // Forzamos la descarga con res.download
-  return res.download(filePath, fileName, (err) => {
+  fs.access(filePath, fs.constants.F_OK, (err) => {
     if (err) {
-      console.error('Error al descargar el archivo:', err);
-      return res.status(500).json({ error: 'Error al descargar el archivo' });
+      return res.status(404).json({ error: 'Archivo no encontrado' });
     }
+    
+    // Forzamos la descarga con res.download
+    return res.download(filePath, fileName, (err) => {
+      if (err) {
+        console.error('Error al descargar el archivo:', err);
+        return res.status(500).json({ error: 'Error al descargar el archivo' });
+      }
+    });
   });
 };
 

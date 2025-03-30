@@ -1,7 +1,8 @@
 // frontend/src/components/pos/PointOfSale.jsx
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { Search, ShoppingCart, CreditCard, DollarSign, Trash, Plus, Minus } from 'lucide-react';
 import { motion } from 'framer-motion';
+import { v4 as uuidv4 } from 'uuid'; // Importar biblioteca uuid para generar identificadores únicos
 
 const PointOfSale = () => {
   // Estados para los productos y la búsqueda
@@ -23,33 +24,50 @@ const PointOfSale = () => {
   const [processing, setProcessing] = useState(false);
   const [transactionComplete, setTransactionComplete] = useState(false);
   
+  // Estado para el nombre del cliente
+  const [customerName, setCustomerName] = useState('Cliente General');
+  
+  // Función para cargar productos, memoizada para evitar recreaciones innecesarias
+  const fetchProducts = useCallback(async () => {
+    try {
+      setLoading(true);
+      // Formatear fechas para la consulta
+      const currentDate = new Date();
+      const fromDate = new Date(currentDate.getFullYear() - 1, 0, 1).toISOString().split('T')[0];
+      const toDate = currentDate.toISOString().split('T')[0];
+      
+      const response = await fetch(`/api/products?from=${fromDate}&to=${toDate}`);
+      
+      if (!response.ok) {
+        throw new Error(`Error al cargar productos: ${response.status} ${response.statusText}`);
+      }
+      
+      const data = await response.json();
+      
+      // Asegurar que cada producto tenga un ID único
+      const productsWithIds = data.map(product => ({
+        ...product,
+        id: product.id || uuidv4(), // Usar UUID para garantizar unicidad
+        price: parseFloat(product.price) || 0, // Convertir precio a número
+        stock: parseInt(product.stock) || 0, // Convertir stock a entero
+        sales: parseInt(product.sales) || 0 // Convertir ventas a entero
+      }));
+      
+      setProducts(productsWithIds);
+      setFilteredProducts(productsWithIds);
+      setError(null);
+    } catch (err) {
+      console.error('Error fetching products:', err);
+      setError(err.message || 'Error al cargar productos');
+    } finally {
+      setLoading(false);
+    }
+  }, []);
+
   // Efecto para cargar productos al iniciar
   useEffect(() => {
-    const fetchProducts = async () => {
-      try {
-        setLoading(true);
-        // Formatear fechas para la consulta
-        const fromDate = '2023-01-01';
-        const toDate = '2024-12-31';
-        
-        const response = await fetch(`/api/products?from=${fromDate}&to=${toDate}`);
-        if (!response.ok) {
-          throw new Error('Error al cargar productos');
-        }
-        
-        const data = await response.json();
-        setProducts(data);
-        setFilteredProducts(data);
-      } catch (err) {
-        setError(err.message);
-        console.error('Error fetching products:', err);
-      } finally {
-        setLoading(false);
-      }
-    };
-
     fetchProducts();
-  }, []);
+  }, [fetchProducts]);
 
   // Efecto para calcular el total del carrito
   useEffect(() => {
@@ -57,8 +75,10 @@ const PointOfSale = () => {
     setTotal(newTotal);
     
     // Reset change calculation when cart changes
-    setChange(0);
-    setCashReceived('');
+    if (cart.length === 0) {
+      setCashReceived('');
+      setChange(0);
+    }
   }, [cart]);
 
   // Filtrar productos según término de búsqueda
@@ -68,9 +88,10 @@ const PointOfSale = () => {
       return;
     }
     
+    const searchTermLower = searchTerm.toLowerCase();
     const filtered = products.filter(product => 
-      product.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      product.category.toLowerCase().includes(searchTerm.toLowerCase())
+      (product.name?.toLowerCase().includes(searchTermLower)) ||
+      (product.category?.toLowerCase().includes(searchTermLower))
     );
     
     setFilteredProducts(filtered);
@@ -78,20 +99,29 @@ const PointOfSale = () => {
 
   // Añadir producto al carrito
   const addToCart = (product) => {
+    if (!product || !product.id) {
+      console.error('Intento de añadir un producto inválido al carrito:', product);
+      return;
+    }
+    
     setCart(prevCart => {
       // Check if product is already in cart
-      const existingItem = prevCart.find(item => item.id === product.id);
+      const existingItemIndex = prevCart.findIndex(item => item.id === product.id);
       
-      if (existingItem) {
+      if (existingItemIndex >= 0) {
         // Update quantity if already in cart
-        return prevCart.map(item => 
-          item.id === product.id 
-            ? { ...item, quantity: item.quantity + 1 } 
-            : item
-        );
+        const updatedCart = [...prevCart];
+        updatedCart[existingItemIndex] = {
+          ...updatedCart[existingItemIndex],
+          quantity: updatedCart[existingItemIndex].quantity + 1
+        };
+        return updatedCart;
       } else {
         // Add new item to cart
-        return [...prevCart, { ...product, quantity: 1, id: product.id || Math.random().toString(36).substr(2, 9) }];
+        return [...prevCart, { 
+          ...product,
+          quantity: 1
+        }];
       }
     });
   };
@@ -116,12 +146,15 @@ const PointOfSale = () => {
 
   // Calcular cambio basado en el dinero recibido
   const calculateChange = (value) => {
-    const received = parseFloat(value);
+    // Eliminar caracteres no numéricos excepto punto decimal
+    const sanitizedValue = value.replace(/[^\d.]/g, '');
+    const received = parseFloat(sanitizedValue);
+    
     if (!isNaN(received)) {
-      setCashReceived(value);
+      setCashReceived(sanitizedValue);
       setChange(received - total);
     } else {
-      setCashReceived(value);
+      setCashReceived(sanitizedValue);
       setChange(0);
     }
   };
@@ -133,14 +166,20 @@ const PointOfSale = () => {
     try {
       setProcessing(true);
       
-      // Construir datos de la venta
+      // Preparar los datos para el backend
       const saleData = {
-        items: cart,
+        items: cart.map(item => ({
+          name: item.name,
+          category: item.category || '',
+          price: parseFloat(item.price) || 0,
+          quantity: parseInt(item.quantity) || 1
+        })),
         total,
         paymentMethod,
-        cashReceived: paymentMethod === 'cash' ? parseFloat(cashReceived) : total,
-        change: paymentMethod === 'cash' ? change : 0,
-        date: new Date().toISOString()
+        cashReceived: paymentMethod === 'cash' ? parseFloat(cashReceived) : null,
+        change: paymentMethod === 'cash' ? change : null,
+        date: new Date().toISOString(),
+        customerName: customerName.trim() || 'Cliente General'
       };
       
       // Enviar datos al servidor
@@ -153,13 +192,19 @@ const PointOfSale = () => {
       });
       
       if (!response.ok) {
-        throw new Error('Error al procesar el pago');
+        const errorData = await response.json();
+        throw new Error(errorData.error || 'Error al procesar el pago');
       }
+      
+      // Procesar respuesta exitosa
+      const responseData = await response.json();
+      console.log('Venta procesada:', responseData);
       
       // Resetear estados después de una venta exitosa
       setTransactionComplete(true);
       setTimeout(() => {
         setCart([]);
+        setCustomerName('Cliente General');
         setCashReceived('');
         setChange(0);
         setShowPaymentModal(false);
@@ -167,8 +212,9 @@ const PointOfSale = () => {
       }, 2000);
       
     } catch (err) {
-      setError(err.message);
+      setError(err.message || 'Error al procesar el pago');
       console.error('Error processing payment:', err);
+      alert(`Error: ${err.message || 'Ha ocurrido un error al procesar el pago'}`);
     } finally {
       setProcessing(false);
     }
@@ -177,7 +223,11 @@ const PointOfSale = () => {
   // Verificar si el pago es válido
   const isPaymentValid = () => {
     if (paymentMethod === 'card') return true;
-    return parseFloat(cashReceived) >= total;
+    
+    if (!cashReceived) return false;
+    
+    const received = parseFloat(cashReceived);
+    return !isNaN(received) && received >= total;
   };
 
   return (
@@ -212,7 +262,7 @@ const PointOfSale = () => {
             <div className="bg-red-900 bg-opacity-50 text-white p-4 rounded-lg">
               <p>{error}</p>
               <button
-                onClick={() => window.location.reload()}
+                onClick={fetchProducts}
                 className="mt-2 bg-red-700 hover:bg-red-600 px-4 py-2 rounded-md text-sm"
               >
                 Reintentar
@@ -220,22 +270,28 @@ const PointOfSale = () => {
             </div>
           ) : (
             <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
-              {filteredProducts.map((product) => (
-                <motion.div
-                  key={product.name}
-                  className="bg-gray-800 rounded-lg overflow-hidden border border-gray-700 cursor-pointer"
-                  whileHover={{ y: -5, boxShadow: '0 10px 20px rgba(0,0,0,0.2)' }}
-                  onClick={() => addToCart(product)}
-                >
-                  <div className="p-4">
-                    <h3 className="text-lg font-semibold text-white mb-1 truncate">{product.name}</h3>
-                    <p className="text-gray-400 text-sm mb-2">{product.category}</p>
-                    <p className="text-blue-400 font-bold">${product.price?.toFixed(2)}</p>
-                  </div>
-                </motion.div>
-              ))}
-              
-              {filteredProducts.length === 0 && (
+              {filteredProducts.length > 0 ? (
+                filteredProducts.map((product) => (
+                  <motion.div
+                    key={product.id}
+                    className="bg-gray-800 rounded-lg overflow-hidden border border-gray-700 cursor-pointer"
+                    whileHover={{ y: -5, boxShadow: '0 10px 20px rgba(0,0,0,0.2)' }}
+                    onClick={() => addToCart(product)}
+                  >
+                    <div className="p-4">
+                      <h3 className="text-lg font-semibold text-white mb-1 truncate">
+                        {product.name || 'Producto sin nombre'}
+                      </h3>
+                      <p className="text-gray-400 text-sm mb-2">
+                        {product.category || 'Sin categoría'}
+                      </p>
+                      <p className="text-blue-400 font-bold">
+                        ${(product.price || 0).toFixed(2)}
+                      </p>
+                    </div>
+                  </motion.div>
+                ))
+              ) : (
                 <div className="col-span-full text-center py-10 text-gray-400">
                   <p>No se encontraron productos.</p>
                 </div>
@@ -248,15 +304,28 @@ const PointOfSale = () => {
         <div className="w-1/3 bg-gray-800 p-6 flex flex-col border-l border-gray-700">
           <div className="flex justify-between items-center mb-4">
             <h2 className="text-xl font-bold text-white">Carrito de Compra</h2>
-            <div className="flex">
+            {cart.length > 0 && (
               <button
                 onClick={() => setCart([])}
                 className="bg-red-600 text-white p-2 rounded-md hover:bg-red-700 transition-colors"
-                disabled={cart.length === 0}
               >
                 <Trash size={18} />
               </button>
-            </div>
+            )}
+          </div>
+          
+          {/* Campo de nombre de cliente */}
+          <div className="mb-4">
+            <label className="block text-sm font-medium text-gray-400 mb-1">
+              Cliente:
+            </label>
+            <input
+              type="text"
+              value={customerName}
+              onChange={(e) => setCustomerName(e.target.value)}
+              placeholder="Nombre del cliente"
+              className="w-full bg-gray-700 text-white p-2 rounded border border-gray-600 focus:outline-none focus:border-blue-500"
+            />
           </div>
           
           {/* Cart Items */}
@@ -273,7 +342,12 @@ const PointOfSale = () => {
                   <li key={item.id} className="bg-gray-700 rounded-lg p-3 flex justify-between">
                     <div className="flex-1">
                       <h3 className="font-medium text-white">{item.name}</h3>
-                      <p className="text-sm text-gray-300">${item.price?.toFixed(2)} x {item.quantity}</p>
+                      <p className="text-sm text-gray-300">
+                        ${(item.price || 0).toFixed(2)} x {item.quantity}
+                      </p>
+                      <p className="text-sm text-blue-300 font-medium">
+                        Subtotal: ${((item.price || 0) * item.quantity).toFixed(2)}
+                      </p>
                     </div>
                     <div className="flex items-center space-x-2">
                       <button
