@@ -1,6 +1,14 @@
 import { motion } from "framer-motion";
-import React, { useEffect, useState } from "react";
-import { Trash, Edit } from "lucide-react";
+import React, { useState } from "react";
+import { Trash, Edit, Plus } from "lucide-react";
+import { 
+  useInventoryDetails, 
+  useAddInventory, 
+  useUpdateInventory, 
+  useDeleteInventory 
+} from "../../../hooks/useApi";
+import { useAppContext } from "../../../context/AppContext";
+import LoadingSpinner from "../../ui/LoadingSpinner";
 
 const formatDate = (dateStr) => {
   if (!dateStr) return "";
@@ -8,10 +16,9 @@ const formatDate = (dateStr) => {
 };
 
 const InventoryDetails = () => {
-  const [details, setDetails] = useState([]);
+  const { showNotification } = useAppContext();
   const [showAddForm, setShowAddForm] = useState(false);
   const [newRegistro, setNewRegistro] = useState("");
-  const [formMessage, setFormMessage] = useState("");
   const [showEditModal, setShowEditModal] = useState(false);
   const [editFormData, setEditFormData] = useState({
     ticket: "",
@@ -20,60 +27,49 @@ const InventoryDetails = () => {
     telefono: ""
   });
 
-  // Cargar detalles de inventario
-  const fetchInventoryDetails = async () => {
-    try {
-      const res = await fetch("/api/inventario/details");
-      const data = await res.json();
-      setDetails(data);
-    } catch (error) {
-      console.error("Error fetching inventory details:", error);
-    }
-  };
-
-  useEffect(() => {
-    fetchInventoryDetails();
-  }, []);
+  // Utilizar los hooks personalizados de React Query
+  const { 
+    data: details = [], 
+    isLoading, 
+    error, 
+    refetch 
+  } = useInventoryDetails();
+  
+  const addInventoryMutation = useAddInventory();
+  const updateInventoryMutation = useUpdateInventory();
+  const deleteInventoryMutation = useDeleteInventory();
 
   // Agregar un nuevo registro
   const handleAddRegistroSubmit = async (e) => {
     e.preventDefault();
+    
     try {
-      const res = await fetch("/api/inventario", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ registro: parseInt(newRegistro, 10) }),
-      });
-      const data = await res.json();
-      if (res.ok) {
-        setFormMessage("Registro agregado correctamente");
-        setNewRegistro("");
-        fetchInventoryDetails();
-        setShowAddForm(false);
-      } else {
-        setFormMessage("Error: " + data.error);
-      }
+      await addInventoryMutation.mutateAsync({ registro: parseInt(newRegistro, 10) });
+      showNotification("Registro agregado correctamente", "success");
+      setNewRegistro("");
+      setShowAddForm(false);
     } catch (error) {
       console.error("Error adding registro:", error);
-      setFormMessage("Error al agregar el registro");
+      showNotification(
+        `Error al agregar el registro: ${error.response?.data?.error || error.message}`, 
+        "error"
+      );
     }
   };
 
-  // Eliminar registro (solicitando confirmación)
+  // Eliminar registro
   const handleDelete = async (ticket) => {
     if (!window.confirm("¿Está seguro de eliminar este registro?")) return;
+    
     try {
-      const res = await fetch(`/api/inventario/details/${ticket}`, {
-        method: "DELETE",
-      });
-      const data = await res.json();
-      if (res.ok) {
-        fetchInventoryDetails();
-      } else {
-        console.error("Error deleting registro:", data);
-      }
+      await deleteInventoryMutation.mutateAsync(ticket);
+      showNotification("Registro eliminado correctamente", "success");
     } catch (error) {
       console.error("Error deleting registro:", error);
+      showNotification(
+        `Error al eliminar el registro: ${error.response?.data?.error || error.message}`, 
+        "error"
+      );
     }
   };
 
@@ -81,9 +77,9 @@ const InventoryDetails = () => {
   const openEditModal = (item) => {
     setEditFormData({
       ticket: item.ticket,
-      date: item.date,
-      name: item.name,
-      telefono: item.telefono,
+      date: item.date || "",
+      name: item.name || "",
+      telefono: item.telefono || "",
     });
     setShowEditModal(true);
   };
@@ -97,24 +93,21 @@ const InventoryDetails = () => {
   // Guardar los cambios desde el modal
   const handleEditSubmit = async (e) => {
     e.preventDefault();
+    
     try {
-      const res = await fetch(
-        `/api/inventario/details/${editFormData.ticket}`,
-        {
-          method: "PUT",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify(editFormData),
-        }
-      );
-      const data = await res.json();
-      if (res.ok) {
-        setShowEditModal(false);
-        fetchInventoryDetails();
-      } else {
-        console.error("Error updating registro:", data);
-      }
+      await updateInventoryMutation.mutateAsync({
+        ticket: editFormData.ticket,
+        telefono: editFormData.telefono
+      });
+      
+      showNotification("Registro actualizado correctamente", "success");
+      setShowEditModal(false);
     } catch (error) {
       console.error("Error updating registro:", error);
+      showNotification(
+        `Error al actualizar el registro: ${error.response?.data?.error || error.message}`, 
+        "error"
+      );
     }
   };
 
@@ -131,8 +124,9 @@ const InventoryDetails = () => {
           <h2 className="text-xl font-semibold text-gray-100">Detalles de Inventario</h2>
           <button
             onClick={() => setShowAddForm(!showAddForm)}
-            className="bg-blue-500 text-white px-4 py-2 rounded"
+            className="bg-blue-500 text-white px-4 py-2 rounded flex items-center gap-2"
           >
+            <Plus size={18} />
             Agregar Registro
           </button>
         </div>
@@ -148,75 +142,110 @@ const InventoryDetails = () => {
               className="border border-gray-600 bg-gray-700 text-white p-2 rounded"
               required
             />
-            <button type="submit" className="bg-green-500 text-white px-4 py-2 rounded">
-              Guardar
+            <button 
+              type="submit" 
+              className="bg-green-500 text-white px-4 py-2 rounded"
+              disabled={addInventoryMutation.isLoading}
+            >
+              {addInventoryMutation.isLoading ? (
+                <span className="flex items-center gap-2">
+                  <div className="animate-spin h-4 w-4 border-t-2 border-b-2 border-white rounded-full"></div>
+                  Guardando...
+                </span>
+              ) : (
+                "Guardar"
+              )}
             </button>
           </form>
         )}
-        {formMessage && <p className="text-gray-100 mb-4">{formMessage}</p>}
+
+        {/* Estado de carga y error */}
+        {isLoading && (
+          <div className="flex justify-center items-center py-6">
+            <LoadingSpinner />
+          </div>
+        )}
+
+        {error && (
+          <div className="bg-red-900 bg-opacity-50 p-4 rounded-lg mb-4 text-white">
+            <p>Error al cargar detalles: {error.message}</p>
+            <button 
+              className="mt-2 bg-red-700 px-3 py-1 rounded text-sm"
+              onClick={() => refetch()}
+            >
+              Reintentar
+            </button>
+          </div>
+        )}
 
         {/* Tabla de detalles */}
-        {details.length > 0 ? (
-          <div className="overflow-x-auto">
-            <table className="min-w-full divide-y divide-gray-700">
-              <thead>
-                <tr>
-                  <th className="px-3 py-3 text-left text-xs font-medium text-gray-400 uppercase tracking-wider">
-                    Ticket
-                  </th>
-                  <th className="px-3 py-3 text-left text-xs font-medium text-gray-400 uppercase tracking-wider">
-                    Fecha
-                  </th>
-                  <th className="px-3 py-3 text-left text-xs font-medium text-gray-400 uppercase tracking-wider">
-                    Cliente
-                  </th>
-                  <th className="px-3 py-3 text-left text-xs font-medium text-gray-400 uppercase tracking-wider">
-                    Teléfono
-                  </th>
-                  <th className="px-3 py-3 text-left text-xs font-medium text-gray-400 uppercase tracking-wider">
-                    Acciones
-                  </th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-gray-700">
-                {details.map((item, index) => (
-                  <motion.tr
-                    key={index}
-                    initial={{ opacity: 0 }}
-                    animate={{ opacity: 1 }}
-                    transition={{ duration: 0.3 }}
-                  >
-                    <td className="px-3 py-4 whitespace-nowrap text-sm font-medium text-gray-100">
-                      {item.ticket}
-                    </td>
-                    <td className="px-3 py-4 whitespace-nowrap text-sm text-gray-300">
-                      {formatDate(item.date)}
-                    </td>
-                    <td className="px-3 py-4 whitespace-nowrap text-sm text-gray-300">
-                      {item.name}
-                    </td>
-                    <td className="px-3 py-4 whitespace-nowrap text-sm text-gray-300">
-                      {item.telefono}
-                    </td>
-                    <td className="px-3 py-4 whitespace-nowrap text-sm text-gray-300 flex gap-2">
-                      <Edit
-                        className="cursor-pointer hover:text-blue-400"
-                        size={18}
-                        onClick={() => openEditModal(item)}
-                      />
-                      <Trash
-                        className="cursor-pointer hover:text-red-500"
-                        size={18}
-                        onClick={() => handleDelete(item.ticket)}
-                      />
-                    </td>
-                  </motion.tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-        ) : (
-          <p className="text-gray-100">No se encontraron detalles.</p>
+        {!isLoading && !error && (
+          details.length > 0 ? (
+            <div className="overflow-x-auto">
+              <table className="min-w-full divide-y divide-gray-700">
+                <thead>
+                  <tr>
+                    <th className="px-3 py-3 text-left text-xs font-medium text-gray-400 uppercase tracking-wider">
+                      Ticket
+                    </th>
+                    <th className="px-3 py-3 text-left text-xs font-medium text-gray-400 uppercase tracking-wider">
+                      Fecha
+                    </th>
+                    <th className="px-3 py-3 text-left text-xs font-medium text-gray-400 uppercase tracking-wider">
+                      Cliente
+                    </th>
+                    <th className="px-3 py-3 text-left text-xs font-medium text-gray-400 uppercase tracking-wider">
+                      Teléfono
+                    </th>
+                    <th className="px-3 py-3 text-left text-xs font-medium text-gray-400 uppercase tracking-wider">
+                      Acciones
+                    </th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-gray-700">
+                  {details.map((item, index) => (
+                    <motion.tr
+                      key={index}
+                      initial={{ opacity: 0 }}
+                      animate={{ opacity: 1 }}
+                      transition={{ duration: 0.3 }}
+                    >
+                      <td className="px-3 py-4 whitespace-nowrap text-sm font-medium text-gray-100">
+                        {item.ticket}
+                      </td>
+                      <td className="px-3 py-4 whitespace-nowrap text-sm text-gray-300">
+                        {formatDate(item.date)}
+                      </td>
+                      <td className="px-3 py-4 whitespace-nowrap text-sm text-gray-300">
+                        {item.name}
+                      </td>
+                      <td className="px-3 py-4 whitespace-nowrap text-sm text-gray-300">
+                        {item.telefono || "-"}
+                      </td>
+                      <td className="px-3 py-4 whitespace-nowrap text-sm text-gray-300 flex gap-2">
+                        <button
+                          className="text-blue-400 hover:text-blue-300 transition-colors"
+                          onClick={() => openEditModal(item)}
+                          disabled={updateInventoryMutation.isLoading}
+                        >
+                          <Edit size={18} />
+                        </button>
+                        <button
+                          className="text-red-400 hover:text-red-300 transition-colors"
+                          onClick={() => handleDelete(item.ticket)}
+                          disabled={deleteInventoryMutation.isLoading}
+                        >
+                          <Trash size={18} />
+                        </button>
+                      </td>
+                    </motion.tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          ) : (
+            <p className="text-gray-400 text-center py-6">No hay registros de inventario para mostrar.</p>
+          )
         )}
       </motion.div>
 
@@ -246,9 +275,10 @@ const InventoryDetails = () => {
                 <input
                   type="date"
                   name="date"
-                  value={editFormData.date.substring(0, 10)}
+                  value={editFormData.date?.substring(0, 10) || ""}
                   onChange={handleEditChange}
                   className="border border-gray-600 bg-gray-700 text-white p-2 rounded"
+                  disabled
                 />
               </div>
               <div className="flex flex-col">
@@ -256,9 +286,10 @@ const InventoryDetails = () => {
                 <input
                   type="text"
                   name="name"
-                  value={editFormData.name}
+                  value={editFormData.name || ""}
                   onChange={handleEditChange}
                   className="border border-gray-600 bg-gray-700 text-white p-2 rounded"
+                  disabled
                 />
               </div>
               <div className="flex flex-col">
@@ -266,7 +297,7 @@ const InventoryDetails = () => {
                 <input
                   type="text"
                   name="telefono"
-                  value={editFormData.telefono}
+                  value={editFormData.telefono || ""}
                   onChange={handleEditChange}
                   className="border border-gray-600 bg-gray-700 text-white p-2 rounded"
                 />
@@ -275,12 +306,23 @@ const InventoryDetails = () => {
                 <button
                   type="button"
                   onClick={() => setShowEditModal(false)}
-                  className="bg-red-500 text-white px-4 py-2 rounded"
+                  className="bg-gray-600 text-white px-4 py-2 rounded"
                 >
                   Cancelar
                 </button>
-                <button type="submit" className="bg-green-500 text-white px-4 py-2 rounded">
-                  Guardar Cambios
+                <button 
+                  type="submit" 
+                  className="bg-green-500 text-white px-4 py-2 rounded"
+                  disabled={updateInventoryMutation.isLoading}
+                >
+                  {updateInventoryMutation.isLoading ? (
+                    <span className="flex items-center gap-2">
+                      <div className="animate-spin h-4 w-4 border-t-2 border-b-2 border-white rounded-full"></div>
+                      Guardando...
+                    </span>
+                  ) : (
+                    "Guardar Cambios"
+                  )}
                 </button>
               </div>
             </form>

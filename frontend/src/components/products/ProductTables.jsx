@@ -1,47 +1,39 @@
 import { motion } from "framer-motion";
 import { Search } from "lucide-react";
 import { useState, useEffect } from "react";
+import { useQuery } from "react-query";
+import { productService } from "../../services/api";
+import LoadingSpinner from "../ui/LoadingSpinner";
 
 const ProductsTable = ({ fromDate, toDate }) => {
   const [searchTerm, setSearchTerm] = useState("");
-  const [allProducts, setAllProducts] = useState([]);
   const [filteredProducts, setFilteredProducts] = useState([]);
   const [currentPage, setCurrentPage] = useState(1);
-
   const itemsPerPage = 7;
 
-  const fetchProducts = () => {
-    let url = "/api/products";
-    // Agregamos los query params si vienen desde el padre
-    if (fromDate && toDate) {
-      url += `?from=${fromDate}&to=${toDate}`;
+  // Usar React Query para obtener productos
+  const { data: products, isLoading, error } = useQuery(
+    ['products', fromDate, toDate],
+    () => productService.getAll(fromDate, toDate).then((res) => res.data),
+    {
+      keepPreviousData: true,
+      staleTime: 5 * 60 * 1000, // 5 minutos
+      enabled: !!fromDate && !!toDate, // Solo ejecutar si hay fechas
     }
-    fetch(url)
-      .then((res) => res.json())
-      .then((data) => {
-        setAllProducts(data);
-        setFilteredProducts(data);
-      })
-      .catch((error) => {
-        console.error("Error fetching products:", error);
-      });
-  };
-
-  // Llamar fetchProducts cada vez que cambien las fechas
-  useEffect(() => {
-    fetchProducts();
-  }, [fromDate, toDate]);
+  );
 
   // Filtrar productos según el término de búsqueda
   useEffect(() => {
-    const filtered = allProducts.filter(
+    if (!products) return;
+    
+    const filtered = products.filter(
       (product) =>
         product.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
         product.category.toLowerCase().includes(searchTerm.toLowerCase())
     );
     setFilteredProducts(filtered);
     setCurrentPage(1);
-  }, [searchTerm, allProducts]);
+  }, [searchTerm, products]);
 
   const indexOfLastItem = currentPage * itemsPerPage;
   const indexOfFirstItem = indexOfLastItem - itemsPerPage;
@@ -82,85 +74,118 @@ const ProductsTable = ({ fromDate, toDate }) => {
         </div>
       </div>
 
-      {/* Tabla de productos */}
-      <div className="overflow-x-auto">
-        <table className="min-w-full divide-y divide-gray-700">
-          <thead>
-            <tr>
-              <th className="px-6 py-3 text-left text-xs font-medium text-gray-400 uppercase tracking-wider">
-                Nombre
-              </th>
-              <th className="px-6 py-3 text-left text-xs font-medium text-gray-400 uppercase tracking-wider">
-                Categoría
-              </th>
-              <th className="px-6 py-3 text-left text-xs font-medium text-gray-400 uppercase tracking-wider">
-                Precio
-              </th>
-              <th className="px-6 py-3 text-left text-xs font-medium text-gray-400 uppercase tracking-wider">
-                Cantidad
-              </th>
-              <th className="px-6 py-3 text-left text-xs font-medium text-gray-400 uppercase tracking-wider">
-                Piezas
-              </th>
-            </tr>
-          </thead>
-          <tbody className="divide-y divide-gray-700">
-            {currentProducts.map((product, index) => {
-              let priceValue = parseFloat(product.price);
-              if (isNaN(priceValue)) priceValue = 0;
-              return (
-                <motion.tr
-                  key={index}
-                  initial={{ opacity: 0 }}
-                  animate={{ opacity: 1 }}
-                  transition={{ duration: 0.3 }}
-                >
-                  <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-100">
-                    {product.name}
-                  </td>
-                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-300">
-                    {product.category}
-                  </td>
-                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-300">
-                    ${priceValue.toFixed(2)}
-                  </td>
-                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-300">
-                    {product.stock}
-                  </td>
-                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-300">
-                    {product.sales}
-                  </td>
-                </motion.tr>
-              );
-            })}
-          </tbody>
-        </table>
-      </div>
+      {/* Estado de carga y error */}
+      {isLoading && (
+        <div className="py-8 text-center">
+          <LoadingSpinner />
+        </div>
+      )}
 
-      {/* Controles de paginación */}
-      <div className="flex flex-col sm:flex-row justify-center items-center mt-4 gap-2">
-        <button
-          onClick={handlePrev}
-          disabled={currentPage === 1}
-          className={`px-4 py-2 rounded ${
-            currentPage === 1 ? "bg-gray-600 text-gray-300" : "bg-blue-500 text-white"
-          }`}
-        >
-          Anterior
-        </button>
-        <span className="text-gray-100">
-          Página {currentPage} de {totalPages}
-        </span>
-        <button
-          onClick={handleNext}
-          disabled={currentPage === totalPages}
-          className={`px-4 py-2 rounded ${
-            currentPage === totalPages ? "bg-gray-600 text-gray-300" : "bg-blue-500 text-white"
-          }`}
-        >
-          Siguiente
-        </button>
-      </div>
+      {error && (
+        <div className="py-8 text-center text-red-500">
+          <p>Error al cargar los productos: {error.message}</p>
+          <button 
+            onClick={() => refetch()}
+            className="mt-3 px-4 py-2 bg-blue-500 text-white rounded"
+          >
+            Reintentar
+          </button>
+        </div>
+      )}
+
+      {/* Tabla de productos */}
+      {!isLoading && !error && (
+        <>
+          <div className="overflow-x-auto">
+            <table className="min-w-full divide-y divide-gray-700">
+              <thead>
+                <tr>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-400 uppercase tracking-wider">
+                    Nombre
+                  </th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-400 uppercase tracking-wider">
+                    Categoría
+                  </th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-400 uppercase tracking-wider">
+                    Precio
+                  </th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-400 uppercase tracking-wider">
+                    Cantidad
+                  </th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-400 uppercase tracking-wider">
+                    Piezas
+                  </th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-gray-700">
+                {currentProducts.length > 0 ? (
+                  currentProducts.map((product, index) => {
+                    let priceValue = parseFloat(product.price);
+                    if (isNaN(priceValue)) priceValue = 0;
+                    return (
+                      <motion.tr
+                        key={index}
+                        initial={{ opacity: 0 }}
+                        animate={{ opacity: 1 }}
+                        transition={{ duration: 0.3 }}
+                      >
+                        <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-100">
+                          {product.name}
+                        </td>
+                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-300">
+                          {product.category}
+                        </td>
+                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-300">
+                          ${priceValue.toFixed(2)}
+                        </td>
+                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-300">
+                          {product.stock}
+                        </td>
+                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-300">
+                          {product.sales}
+                        </td>
+                      </motion.tr>
+                    );
+                  })
+                ) : (
+                  <tr>
+                    <td colSpan="5" className="px-6 py-4 text-center text-gray-400">
+                      No se encontraron productos que coincidan con la búsqueda.
+                    </td>
+                  </tr>
+                )}
+              </tbody>
+            </table>
+          </div>
+
+          {/* Controles de paginación */}
+          {filteredProducts.length > 0 && (
+            <div className="flex flex-col sm:flex-row justify-center items-center mt-4 gap-2">
+              <button
+                onClick={handlePrev}
+                disabled={currentPage === 1}
+                className={`px-4 py-2 rounded ${
+                  currentPage === 1 ? "bg-gray-600 text-gray-300" : "bg-blue-500 text-white"
+                }`}
+              >
+                Anterior
+              </button>
+              <span className="text-gray-100">
+                Página {currentPage} de {totalPages}
+              </span>
+              <button
+                onClick={handleNext}
+                disabled={currentPage === totalPages}
+                className={`px-4 py-2 rounded ${
+                  currentPage === totalPages ? "bg-gray-600 text-gray-300" : "bg-blue-500 text-white"
+                }`}
+              >
+                Siguiente
+              </button>
+            </div>
+          )}
+        </>
+      )}
     </motion.div>
   );
 };
