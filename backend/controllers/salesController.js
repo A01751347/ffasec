@@ -25,7 +25,13 @@ exports.createSale = async (req, res) => {
       new Date().toISOString().slice(0, 19).replace('T', ' ');
     
     // Iniciar transacción
-    connection = await db.promise().getConnection();
+    const mysql = require('mysql2/promise');
+const connection = await mysql.createConnection({
+  host: process.env.DB_HOST || 'localhost',
+  user: process.env.DB_USER || 'my_app_user',
+  password: process.env.DB_PASSWORD || 'MiContraseñaSegura',
+  database: process.env.DB_DATABASE || 'facturas_db'
+});
     await connection.beginTransaction();
     
     // Insertar venta principal
