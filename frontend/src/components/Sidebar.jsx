@@ -1,21 +1,20 @@
+// frontend/src/components/Sidebar.jsx (actualizado)
 import React, { useState } from 'react';
-import { BarChart2, DollarSign, Home, Menu, PersonStanding, Settings, ShoppingBag } from 'lucide-react';
+import { BarChart2, DollarSign, Home, Menu, PersonStanding, Settings, ShoppingBag, ShoppingCart } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Link } from 'react-router-dom';
 
+// En SIDEBAR_ITEMS agrega el enlace a POS si no está
 const SIDEBAR_ITEMS = [
   { name: 'Inicio', icon: Home, color: '#818CF8', path: '/' },
+  { name: 'Punto de Venta', icon: ShoppingCart, color: '#818CF8', path: '/pos' }, 
   { name: 'Datos', icon: BarChart2, color: '#818CF8', path: '/upload' },
   { name: 'Inventario', icon: ShoppingBag, color: '#818CF8', path: '/inventory' },
   { name: 'Reporte Diario', icon: DollarSign, color: '#818CF8', path: '/report' },
   { name: 'Órdenes', icon: Settings, color: '#818CF8', path: '/orders' },
   { name: 'Clientes', icon: PersonStanding, color: '#818CF8', path: '/customers' },
 ];
-// colors={[ '#6366F1', // principal
-//   '#818CF8', // un poco más claro
-//   '#A5B4FC', // más claro
-//   '#C7D2FE', // aún más claro
-//   ]}
+
 const Sidebar = () => {
   const [isSidebarOpen, setIsSidebarOpen] = useState(true);
 
@@ -47,7 +46,7 @@ const Sidebar = () => {
                   {isSidebarOpen && (
                      <motion.span
                      className="ml-4 whitespace-nowrap overflow-hidden"
-                     style={{ color: '#C7D2FE' }} // ✅ Agregando color dinámico al texto
+                     style={{ color: '#C7D2FE' }}
                      initial={{ opacity: 0, width: 0 }}
                      animate={{ opacity: 1, width: 'auto' }}
                      exit={{ opacity: 0, width: 0 }}
@@ -63,19 +62,7 @@ const Sidebar = () => {
         </nav>
       </div>
     </motion.div>
-    
-    // <div className="container mx-auto p-4">
-    // {/* Navbar principal (opcional, ya tienes links en DashboardPage) */}
-    // <nav className="flex gap-4 mb-8">
-    //   <Link to="/" className="text-blue-500 underline">Dashboard</Link>
-    //   <Link to="/inventory" className="text-blue-500 underline">Inventario</Link>
-    //   <Link to="/orders" className="text-blue-500 underline">Órdenes</Link>
-    //   <Link to="/upload" className="text-blue-500 underline">Subir Excel</Link>
-    //   <Link to="/report" className="text-blue-500 underline">Reporte Diario</Link>
-    //   <Link to="/customers" className="text-blue-500 underline">Clientes</Link>
-    // </nav>
-    // </div>
-  )
+  );
 }
 
-export default Sidebar
+export default Sidebar;

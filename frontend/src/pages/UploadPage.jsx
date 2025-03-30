@@ -94,7 +94,7 @@ const UploadPage = () => {
             <StatCard
               name="Nuevos clientes"
               icon={Users}
-              trend={3.2} // O podrías usar stats.newClientsTrend
+              trend={stats.newClientsTrend}
               value={stats.newClients}
               color="#efefef"
               isLoading={loading}
@@ -153,7 +153,6 @@ const UploadPage = () => {
               // Ejemplo: mostramos la suma total en la parte superior
               value={totalClients}
               // Podrías mostrar la tendencia de nuevos clientes, por ejemplo:
-              trend={stats.newClientsTrend}
               color="#efefef"
               data1={chartData2a}
               colors={['#6366F1', '#818CF8', '#A5B4FC', '#C7D2FE']}

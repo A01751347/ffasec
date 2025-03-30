@@ -22,9 +22,8 @@ class StatCardLarge extends PureComponent {
       chartHeight = 300,
     } = this.props;
 
-    // Limpieza de valores y tendencias
-    const cleanedValue = String(value).replace(/[^0-9.-]+/g, '');
-    const numericValue = parseFloat(cleanedValue);
+    let valueFormatted = parseInt(value).toLocaleString('es-MX');
+
 
     const cleanedTrend = String(trend).replace(/[^0-9.-]+/g, '');
     const numericTrend = parseFloat(cleanedTrend);
@@ -38,16 +37,6 @@ class StatCardLarge extends PureComponent {
     } else {
       timeF = `desde la ${time} pasada`;
     }
-
-    // Formato final de "value"
-    let formattedValue =
-      !isNaN(numericValue) && isFinite(numericValue)
-        ? numericValue.toLocaleString(undefined, {
-            minimumFractionDigits: 0,
-            maximumFractionDigits: 2,
-          })
-        : value; // Si no es numérico, deja el valor tal cual
-
     // Formato final de "trend"
     let formattedTrend =
       !isNaN(numericTrend) && isFinite(numericTrend)
@@ -59,9 +48,9 @@ class StatCardLarge extends PureComponent {
 
     // Ajusta el valor según el tipo
     if (type === 'Percentage') {
-      formattedValue += '%';
+      valueFormatted += '%';
     } else if (type === 'Money') {
-      formattedValue = `$${formattedValue}`;
+      valueFormatted = `$${valueFormatted}`;
     }
 
     // Color según la tendencia
@@ -82,7 +71,7 @@ class StatCardLarge extends PureComponent {
             {name}
           </span>
           <p className="text-4xl py-4 font-semibold" style={{ color: '#E0E7FF' }}>
-            {formattedValue}
+            {valueFormatted}
           </p>
 
           <div className="h-52">

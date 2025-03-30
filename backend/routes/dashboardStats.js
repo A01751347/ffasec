@@ -153,7 +153,7 @@ router.get('/', async (req, res) => {
       const previousCustomers = previousCustomersResult[0].totalCustomers || 0;
 
       
-      console.log(previousCustomersResult[0].totalCustomers);
+      //console.log(previousCustomersResult[0].totalCustomers);
 
       const [previousPiecesResult] = await db.query(
         `SELECT SUM(od.pieces) AS totalPieces 
@@ -241,6 +241,7 @@ router.get('/', async (req, res) => {
         [currentStartStr, currentEndStr]
       );
       const currentSales = currentSalesResult[0].totalSales || 0;
+      console.log('camara',currentSales);
 
       // --- Ventas Totales en rango anterior
       const [previousSalesResult] = await db.query(
@@ -266,7 +267,7 @@ router.get('/', async (req, res) => {
         [currentStartStr, currentEndStr]
       );
       const newClients = currentNewClientsResult[0].newClients || 0;
-      console.log(newClients);
+      //console.log(newClients);
     
 
       // --- Nuevos clientes en el rango anterior (para comparación, si quieres)
@@ -282,8 +283,8 @@ router.get('/', async (req, res) => {
       );
       const oldNewClients = previousNewClientsResult[0].newClients || 0;
       const newClientsTrend = calcTrend(newClients, oldNewClients);
-    console.log(oldNewClients);
-    console.log(newClientsTrend);
+    //console.log(oldNewClients);
+    //console.log(newClientsTrend);
       // --- Prendas totales en el rango actual
       const [currentPiecesResult] = await db.query(
         `SELECT SUM(od.pieces) AS totalPieces
