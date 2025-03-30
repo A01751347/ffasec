@@ -13,6 +13,12 @@ const SIDEBAR_ITEMS = [
   { name: 'Reporte Diario', icon: DollarSign, color: '#818CF8', path: '/report' },
   { name: 'Órdenes', icon: Settings, color: '#818CF8', path: '/orders' },
   { name: 'Clientes', icon: PersonStanding, color: '#818CF8', path: '/customers' },
+  { 
+    name: 'Historial de Ventas', 
+    icon: DollarSign, 
+    color: '#818CF8', 
+    path: '/sales-history' 
+  },
 ];
 
 const Sidebar = () => {

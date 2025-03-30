@@ -191,7 +191,7 @@ const POSPage = () => {
       };
       
       try {
-        // Intentar enviar al backend
+        // Intentar enviar al backend con más detalles de error
         const response = await fetch('/api/sales', {
           method: 'POST',
           headers: {
@@ -200,44 +200,41 @@ const POSPage = () => {
           body: JSON.stringify(saleData)
         });
         
+        const responseData = await response.json(); // Obtener datos de respuesta
+        
         if (!response.ok) {
-          const errorData = await response.json();
-          throw new Error(errorData.error || 'Error al procesar el pago');
+          // Lanzar un error con más detalles
+          throw new Error(responseData.error || 'Error al procesar el pago');
         }
         
-        const result = await response.json();
-        console.log('Venta procesada exitosamente:', result);
-        
-        // Mostrar notificación de éxito
+        console.log('Venta procesada exitosamente:', responseData);
         showNotification('Venta completada con éxito', 'success');
+        
+        // Mostrar confirmación
+        setPaymentComplete(true);
+        
+        // Resetear estado después de 2 segundos
+        setTimeout(() => {
+          setCart([]);
+          setCustomerName('');
+          setCashReceived('');
+          setChange(0);
+          setShowPaymentModal(false);
+          setPaymentComplete(false);
+        }, 2000);
         
       } catch (apiError) {
         console.error('Error al comunicarse con el API:', apiError);
         
-        // Si falla el API, guardar localmente como respaldo
-        const savedSales = JSON.parse(localStorage.getItem('ffasecSales') || '[]');
-        savedSales.push({
-          id: uuidv4(),
-          ...saleData,
-          localSave: true
-        });
-        localStorage.setItem('ffasecSales', JSON.stringify(savedSales));
+        // Mostrar notificación de error detallada
+        showNotification(
+          `Error al procesar la venta: ${apiError.message}`, 
+          'error'
+        );
         
-        showNotification('Se guardó la venta localmente', 'warning');
+        // Si falla el API, mostrar error y no guardar localmente
+        throw apiError;
       }
-      
-      // Mostrar confirmación
-      setPaymentComplete(true);
-      
-      // Resetear estado después de 2 segundos
-      setTimeout(() => {
-        setCart([]);
-        setCustomerName('');
-        setCashReceived('');
-        setChange(0);
-        setShowPaymentModal(false);
-        setPaymentComplete(false);
-      }, 2000);
       
     } catch (error) {
       console.error('Error general al procesar el pago:', error);
@@ -246,7 +243,6 @@ const POSPage = () => {
       setProcessing(false);
     }
   };
-
   return (
     <div className="container mx-auto p-4 z-10">
       {/* Header */}

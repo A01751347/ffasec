@@ -10,6 +10,7 @@ const UploadPage = lazy(() => import("./pages/UploadPage"));
 const ReportPage = lazy(() => import("./pages/ReportPage"));
 const CustomersPage = lazy(() => import("./pages/CustomersPage"));
 const POSPage = lazy(() => import("./pages/POSPage")); // Punto de venta
+const SalesPage = lazy(() => import("./pages/SalesPage"));
 
 function App() {
   return (
@@ -30,7 +31,8 @@ function App() {
           <Route path="/upload" element={<UploadPage />} />
           <Route path="/report" element={<ReportPage />} />
           <Route path="/customers" element={<CustomersPage />} />
-          <Route path="/pos" element={<POSPage />} />
+          <Route path="/pos" element={<POSPage />} />// En el componente Routes, añadir:
+          <Route path="/sales-history" element={<SalesPage />} />
         </Routes>
 
     </div>

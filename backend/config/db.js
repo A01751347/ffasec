@@ -1,28 +1,27 @@
-// backend/config/db.js
 const mysql = require('mysql2');
 require('dotenv').config();
 
-// Crear conexión
+console.log('Intentando conectar con configuración:', {
+  host: process.env.DB_HOST,
+  user: process.env.DB_USER,
+  database: process.env.DB_DATABASE
+});
+
 const connection = mysql.createConnection({
   host: process.env.DB_HOST || 'localhost',
   user: process.env.DB_USER || 'root',
   password: process.env.DB_PASSWORD || '',
-  database: process.env.DB_DATABASE || 'facturas_db'
+  database: process.env.DB_DATABASE
 });
 
-// Conectar
-connection.connect(err => {
+connection.connect((err) => {
   if (err) {
-    console.error('Error conectando a la BD:', err);
-  } else {
-    console.log('Conectado a MySQL');
+    console.error('Error de conexión a MySQL:', {
+      errorCode: err.code,
+      errorMessage: err.message,
+      fatal: err.fatal
+    });
+    return;
   }
+  console.log('Conexión exitosa a MySQL');
 });
-
-// Exportar conexión con soporte para promesas
-module.exports = connection.promise ? connection : mysql.createConnection({
-  host: process.env.DB_HOST || 'localhost',
-  user: process.env.DB_USER || 'root',
-  password: process.env.DB_PASSWORD || '',
-  database: process.env.DB_DATABASE || 'facturas_db'
-}).promise();
