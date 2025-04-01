@@ -1,14 +1,15 @@
 // customerController.js
 const db = require('../config/db');
 
-exports.getCustomersByName = (req, res) => {
-  const searchTerm = req.query.query; // Se espera que la consulta venga en el parámetro 'query'
-  const sql = `SELECT * FROM Customers WHERE name LIKE ?`;
-  db.query(sql, [`%${searchTerm}%`], (err, results) => {
-    if (err) {
-      console.error(err);
-      return res.status(500).json({ error: err.message });
-    }
+exports.getCustomersByName = async (req, res) => {
+  try {
+    const searchTerm = req.query.query || ''; // Valor por defecto para evitar problemas
+    const sql = `SELECT * FROM Customers WHERE name LIKE ?`;
+    
+    const results = await db.query(sql, [`%${searchTerm}%`]);
     res.json(results);
-  });
+  } catch (err) {
+    console.error('Error en búsqueda de clientes:', err);
+    res.status(500).json({ error: err.message });
+  }
 };

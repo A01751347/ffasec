@@ -244,7 +244,10 @@ const POSPage = () => {
     }
   };
   return (
-    <div className="container mx-auto p-4 z-10">
+    
+    <div className="flex-1 overflow-auto relative z-10">
+
+        <main className="max-w-7xl mx-auto py-6 px-4 lg:px-8 xl:px-12">
       {/* Header */}
       <div className="flex justify-between items-center mb-6">
         <h1 className="text-2xl font-bold">Punto de Venta</h1>
@@ -511,6 +514,7 @@ const POSPage = () => {
           </div>
         </div>
       )}
+      </main>
     </div>
   );
 };

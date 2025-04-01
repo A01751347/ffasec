@@ -15,6 +15,7 @@ function subtractMonths(date, months) {
 
 // Helper para calcular variación porcentual
 function calcTrend(current, previous) {
+  if (previous === 0) return current > 0 ? 100 : 0;
   return previous > 0 ? ((current - previous) / previous) * 100 : null;
 }
 
@@ -27,23 +28,23 @@ router.get('/', async (req, res) => {
     // ------------------------------------------------------------------
     if (from && to) {
       // Prendas totales en rango
-      const [totalPiecesRangeResult] = await db.query(
-        `SELECT SUM(od.pieces) AS totalPiecesRange
+      const [totalPiecesResults] = await db.query(
+        `SELECT COALESCE(SUM(od.pieces), 0) AS totalPiecesRange
          FROM OrderDetails od
          JOIN Orders o ON od.number = o.number
          WHERE o.date BETWEEN ? AND ?`,
         [from, to]
       );
-      const totalPiecesRange = totalPiecesRangeResult[0].totalPiecesRange || 0;
+      const totalPiecesRange = parseFloat(totalPiecesResults[0]?.totalPiecesRange || 0);
 
       // Ventas totales en rango
-      const [totalSalesRangeResult] = await db.query(
-        `SELECT SUM(total) AS totalSalesRange
+      const [totalSalesResults] = await db.query(
+        `SELECT COALESCE(SUM(total), 0) AS totalSalesRange
          FROM Orders
          WHERE date BETWEEN ? AND ?`,
         [from, to]
       );
-      const totalSalesRange = totalSalesRangeResult[0].totalSalesRange || 0;
+      const totalSalesRange = parseFloat(totalSalesResults[0]?.totalSalesRange || 0);
 
       return res.json({
         totalPiecesRange,
@@ -53,10 +54,9 @@ router.get('/', async (req, res) => {
 
     // ------------------------------------------------------------------
     // 2) Si se pasa el parámetro "period", se usa la lógica de ventanas móviles
-    //    (semana, mes, trimestre, año) [la lógica previa que ya tenías].
+    //    (semana, mes, trimestre, año)
     // ------------------------------------------------------------------
     else if (period) {
-      // Se mantiene igual a tu implementación previa
       let currentStart, previousStart, previousEnd;
       const currentEndDate = new Date();
 
@@ -105,15 +105,15 @@ router.get('/', async (req, res) => {
       const previousStartStr = formatDate(previousStart);
       const previousEndStr = formatDate(previousEnd);
 
-      // Ventas, órdenes, clientes, etc. (tal cual tu código original)
+      // Ventas, órdenes, clientes, etc.
       const [currentOrdersResult] = await db.query(
-        `SELECT COUNT(*) AS totalOrders, SUM(total) AS totalSales 
+        `SELECT COUNT(*) AS totalOrders, COALESCE(SUM(total), 0) AS totalSales 
          FROM Orders 
          WHERE date BETWEEN ? AND ?`,
         [currentStartStr, currentEndStr]
       );
-      const currentOrders = currentOrdersResult[0].totalOrders || 0;
-      const currentSales = currentOrdersResult[0].totalSales || 0;
+      const currentOrders = parseInt(currentOrdersResult[0]?.totalOrders || 0);
+      const currentSales = parseFloat(currentOrdersResult[0]?.totalSales || 0);
       const currentAverageTicket = currentOrders > 0 ? (currentSales / currentOrders) : 0;
 
       const [currentCustomersResult] = await db.query(
@@ -122,26 +122,26 @@ router.get('/', async (req, res) => {
          WHERE date BETWEEN ? AND ?`,
         [currentStartStr, currentEndStr]
       );
-      const currentCustomers = currentCustomersResult[0].totalCustomers || 0;
+      const currentCustomers = parseInt(currentCustomersResult[0]?.totalCustomers || 0);
 
       const [currentPiecesResult] = await db.query(
-        `SELECT SUM(od.pieces) AS totalPieces 
+        `SELECT COALESCE(SUM(od.pieces), 0) AS totalPieces 
          FROM OrderDetails od
          JOIN Orders o ON od.number = o.number
          WHERE o.date BETWEEN ? AND ?`,
         [currentStartStr, currentEndStr]
       );
-      const currentPieces = currentPiecesResult[0].totalPieces || 0;
+      const currentPieces = parseInt(currentPiecesResult[0]?.totalPieces || 0);
 
       // Período anterior
       const [previousOrdersResult] = await db.query(
-        `SELECT COUNT(*) AS totalOrders, SUM(total) AS totalSales 
+        `SELECT COUNT(*) AS totalOrders, COALESCE(SUM(total), 0) AS totalSales 
          FROM Orders 
          WHERE date BETWEEN ? AND ?`,
         [previousStartStr, previousEndStr]
       );
-      const previousOrders = previousOrdersResult[0].totalOrders || 0;
-      const previousSales = previousOrdersResult[0].totalSales || 0;
+      const previousOrders = parseInt(previousOrdersResult[0]?.totalOrders || 0);
+      const previousSales = parseFloat(previousOrdersResult[0]?.totalSales || 0);
       const previousAverageTicket = previousOrders > 0 ? (previousSales / previousOrders) : 0;
 
       const [previousCustomersResult] = await db.query(
@@ -150,19 +150,16 @@ router.get('/', async (req, res) => {
          WHERE date BETWEEN ? AND ?`,
         [previousStartStr, previousEndStr]
       );
-      const previousCustomers = previousCustomersResult[0].totalCustomers || 0;
-
-      
-      //console.log(previousCustomersResult[0].totalCustomers);
+      const previousCustomers = parseInt(previousCustomersResult[0]?.totalCustomers || 0);
 
       const [previousPiecesResult] = await db.query(
-        `SELECT SUM(od.pieces) AS totalPieces 
+        `SELECT COALESCE(SUM(od.pieces), 0) AS totalPieces 
          FROM OrderDetails od
          JOIN Orders o ON od.number = o.number
          WHERE o.date BETWEEN ? AND ?`,
         [previousStartStr, previousEndStr]
       );
-      const previousPieces = previousPiecesResult[0].totalPieces || 0;
+      const previousPieces = parseInt(previousPiecesResult[0]?.totalPieces || 0);
 
       const trends = {
         orders: calcTrend(currentOrders, previousOrders),
@@ -187,7 +184,7 @@ router.get('/', async (req, res) => {
         },
         trends,
         totalSales: currentSales,
-        newClients: currentCustomers, // puedes ajustar
+        newClients: currentCustomers,
         totalPieces: currentPieces,
         changePercentage: trends.sales
       });
@@ -195,11 +192,6 @@ router.get('/', async (req, res) => {
 
     // ------------------------------------------------------------------
     // 3) Lógica por defecto (sin "from/to" ni "period")
-    //    Aquí añadimos la nueva lógica que necesitas:
-    //    - Última fecha de orden del año actual
-    //    - Comparación 1 enero de este año -> última fecha
-    //      vs. 1 enero del año anterior -> misma fecha
-    //    - Nuevos clientes, clientes frecuentes, clientes perdidos, etc.
     // ------------------------------------------------------------------
     else {
       // 3.1) Hallar la última fecha de orden en el año actual
@@ -209,7 +201,7 @@ router.get('/', async (req, res) => {
         WHERE YEAR(date) = YEAR(CURRENT_DATE())
       `);
 
-      let lastOrderDate = lastDateResult[0].lastOrderDate;
+      let lastOrderDate = lastDateResult[0]?.lastOrderDate;
       // Si no hay órdenes este año, tomamos la fecha actual como fallback
       if (!lastOrderDate) {
         lastOrderDate = new Date();
@@ -235,22 +227,21 @@ router.get('/', async (req, res) => {
 
       // --- Ventas Totales en rango actual
       const [currentSalesResult] = await db.query(
-        `SELECT SUM(total) AS totalSales 
+        `SELECT COALESCE(SUM(total), 0) AS totalSales 
          FROM Orders 
          WHERE date BETWEEN ? AND ?`,
         [currentStartStr, currentEndStr]
       );
-      const currentSales = currentSalesResult[0].totalSales || 0;
-      console.log('camara',currentSales);
+      const currentSales = parseFloat(currentSalesResult[0]?.totalSales || 0);
 
       // --- Ventas Totales en rango anterior
       const [previousSalesResult] = await db.query(
-        `SELECT SUM(total) AS totalSales 
+        `SELECT COALESCE(SUM(total), 0) AS totalSales 
          FROM Orders 
          WHERE date BETWEEN ? AND ?`,
         [previousStartStr, previousEndStr]
       );
-      const previousSales = previousSalesResult[0].totalSales || 0;
+      const previousSales = parseFloat(previousSalesResult[0]?.totalSales || 0);
 
       // --- Cambio porcentual de ventas
       const changePercentage = calcTrend(currentSales, previousSales);
@@ -266,11 +257,9 @@ router.get('/', async (req, res) => {
          ) AS t`,
         [currentStartStr, currentEndStr]
       );
-      const newClients = currentNewClientsResult[0].newClients || 0;
-      //console.log(newClients);
-    
+      const newClients = parseInt(currentNewClientsResult[0]?.newClients || 0);
 
-      // --- Nuevos clientes en el rango anterior (para comparación, si quieres)
+      // --- Nuevos clientes en el rango anterior (para comparación)
       const [previousNewClientsResult] = await db.query(
         `SELECT COUNT(*) AS newClients 
          FROM (
@@ -281,29 +270,28 @@ router.get('/', async (req, res) => {
          ) AS t`,
         [previousStartStr, previousEndStr]
       );
-      const oldNewClients = previousNewClientsResult[0].newClients || 0;
+      const oldNewClients = parseInt(previousNewClientsResult[0]?.newClients || 0);
       const newClientsTrend = calcTrend(newClients, oldNewClients);
-    //console.log(oldNewClients);
-    //console.log(newClientsTrend);
+
       // --- Prendas totales en el rango actual
       const [currentPiecesResult] = await db.query(
-        `SELECT SUM(od.pieces) AS totalPieces
+        `SELECT COALESCE(SUM(od.pieces), 0) AS totalPieces
          FROM OrderDetails od
          JOIN Orders o ON od.number = o.number
          WHERE o.date BETWEEN ? AND ?`,
         [currentStartStr, currentEndStr]
       );
-      const totalPieces = currentPiecesResult[0].totalPieces || 0;
+      const totalPieces = parseInt(currentPiecesResult[0]?.totalPieces || 0);
 
-      // --- Prendas totales en el rango anterior (para comparar si deseas)
+      // --- Prendas totales en el rango anterior (para comparar)
       const [previousPiecesResult] = await db.query(
-        `SELECT SUM(od.pieces) AS totalPieces
+        `SELECT COALESCE(SUM(od.pieces), 0) AS totalPieces
          FROM OrderDetails od
          JOIN Orders o ON od.number = o.number
          WHERE o.date BETWEEN ? AND ?`,
         [previousStartStr, previousEndStr]
       );
-      const oldPieces = previousPiecesResult[0].totalPieces || 0;
+      const oldPieces = parseInt(previousPiecesResult[0]?.totalPieces || 0);
       const piecesTrend = calcTrend(totalPieces, oldPieces);
 
       // --- Ordenes en Inventario
@@ -311,10 +299,9 @@ router.get('/', async (req, res) => {
         `SELECT COUNT(*) AS inventoryCount
          FROM Inventario`
       );
-      const inventoryCount = inventoryCountResult[0].inventoryCount || 0;
+      const inventoryCount = parseInt(inventoryCountResult[0]?.inventoryCount || 0);
 
       // --- Clientes Frecuentes: más de 5 órdenes en últimos 6 meses
-      //     Tomamos la fecha 'currentEnd' como referencia
       const sixMonthsAgo = subtractMonths(currentEnd, 6);
       const sixMonthsAgoStr = formatDate(sixMonthsAgo);
       const [frequentResult] = await db.query(
@@ -324,22 +311,24 @@ router.get('/', async (req, res) => {
            FROM Orders
            WHERE date BETWEEN ? AND ?
            GROUP BY id
-         ) AS sub
-         WHERE sub.orderCount > 5`,
+           HAVING COUNT(*) > 5
+         ) AS sub`,
         [sixMonthsAgoStr, currentEndStr]
       );
-      const frequentClients = frequentResult[0].frequentClients || 0;
+      const frequentClients = parseInt(frequentResult[0]?.frequentClients || 0);
 
       // --- Clientes Perdidos: sin órdenes en los últimos 3 meses
-      //     Tomamos 'currentEnd' como referencia también
       const threeMonthsAgo = subtractMonths(currentEnd, 3);
       const threeMonthsAgoStr = formatDate(threeMonthsAgo);
-      // Contamos en la tabla de 'Customers' los que NO tengan
-      // órdenes posteriores a 'threeMonthsAgo'
       const [lostResult] = await db.query(
         `SELECT COUNT(*) AS lostClients
          FROM Customers c
-         WHERE NOT EXISTS (
+         WHERE EXISTS (
+           SELECT 1 
+           FROM Orders o
+           WHERE o.id = c.id
+         )
+         AND NOT EXISTS (
            SELECT 1 
            FROM Orders o
            WHERE o.id = c.id
@@ -347,20 +336,8 @@ router.get('/', async (req, res) => {
          )`,
         [threeMonthsAgoStr]
       );
-      const lostClients = lostResult[0].lostClients || 0;
-console.log(currentSales,
-  newClients,
-  totalPieces,
-  // El "cambio" vs. el año pasado:
-  changePercentage,
-  // Ejemplo de tendencias individuales
-  newClientsTrend,
-  piecesTrend,
-  // Ordenes en Inventario
-  inventoryCount,
-  // Clientes Frecuentes y Perdidos
-  frequentClients,
-  lostClients,)
+      const lostClients = parseInt(lostResult[0]?.lostClients || 0);
+
       // --- Retornar datos finales
       return res.json({
         // Lo que ya tenías:
@@ -369,7 +346,7 @@ console.log(currentSales,
         totalPieces,
         // El "cambio" vs. el año pasado:
         changePercentage,
-        // Ejemplo de tendencias individuales
+        // Tendencias individuales
         newClientsTrend,
         piecesTrend,
         // Ordenes en Inventario
@@ -377,10 +354,8 @@ console.log(currentSales,
         // Clientes Frecuentes y Perdidos
         frequentClients,
         lostClients,
-        // Info textual para tu UI
+        // Info textual para la UI
         infoRange: `Comparado desde el año pasado (del ${formatDate(previousStart)} al ${formatDate(previousEnd)})`
-
-        
       });
     }
   } catch (err) {

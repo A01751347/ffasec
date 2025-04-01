@@ -8,15 +8,7 @@ const db = require('../config/db');
  * @returns {Promise} - Promesa que resuelve con los resultados
  */
 const executeQuery = (query, params = []) => {
-  return new Promise((resolve, reject) => {
-    db.query(query, params, (error, results) => {
-      if (error) {
-        console.error('Error en consulta SQL:', error);
-        return reject(error);
-      }
-      resolve(results);
-    });
-  });
+  return db.query(query, params);
 };
 
 /**

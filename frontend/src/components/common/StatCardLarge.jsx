@@ -22,11 +22,46 @@ class StatCardLarge extends PureComponent {
       chartHeight = 300,
     } = this.props;
 
-    let valueFormatted = parseInt(value).toLocaleString('es-MX');
+    // Sanitizar y formatear el valor
+    let valueFormatted = '';
+    
+    if (value !== undefined && value !== null) {
+      const numValue = typeof value === 'string' ? 
+        parseFloat(value.replace(/[^0-9.-]+/g, '')) : 
+        parseFloat(value);
+        
+      if (!isNaN(numValue) && isFinite(numValue)) {
+        valueFormatted = numValue.toLocaleString('es-MX');
+      } else {
+        valueFormatted = String(value);
+      }
+    } else {
+      valueFormatted = '0';
+    }
 
+    // Sanitizar y formatear la tendencia
+    let formattedTrend = '';
+    
+    if (trend !== undefined && trend !== null) {
+      const cleanedTrend = String(trend).replace(/[^0-9.-]+/g, '');
+      const numericTrend = parseFloat(cleanedTrend);
+      
+      if (!isNaN(numericTrend) && isFinite(numericTrend)) {
+        formattedTrend = numericTrend.toLocaleString(undefined, {
+          minimumFractionDigits: 0,
+          maximumFractionDigits: 2,
+        });
+      } else {
+        formattedTrend = String(trend);
+      }
+    }
 
-    const cleanedTrend = String(trend).replace(/[^0-9.-]+/g, '');
-    const numericTrend = parseFloat(cleanedTrend);
+    // Formato según el tipo
+    if (type === 'Percentage') {
+      valueFormatted += '%';
+    } else if (type === 'Money') {
+      valueFormatted = `$${valueFormatted}`;
+    }
 
     // Formato del período de tiempo
     let timeF;
@@ -37,22 +72,7 @@ class StatCardLarge extends PureComponent {
     } else {
       timeF = `desde la ${time} pasada`;
     }
-    // Formato final de "trend"
-    let formattedTrend =
-      !isNaN(numericTrend) && isFinite(numericTrend)
-        ? numericTrend.toLocaleString(undefined, {
-            minimumFractionDigits: 0,
-            maximumFractionDigits: 2,
-          })
-        : trend; // Si no es numérico, usa directamente "trend"
-
-    // Ajusta el valor según el tipo
-    if (type === 'Percentage') {
-      valueFormatted += '%';
-    } else if (type === 'Money') {
-      valueFormatted = `$${valueFormatted}`;
-    }
-
+    
     // Color según la tendencia
     const trendColor =
       formattedTrend && String(formattedTrend).includes('-')

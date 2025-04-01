@@ -5,7 +5,7 @@ const { convertDate } = require('../utils/dateUtils');
 const { calculatePieces } = require('../utils/calculatePieces');
 const fs = require('fs');
 const path = require('path');
-const mime = require('mime-types'); // Añadir esta dependencia para validación de tipos MIME
+const mime = require('mime-types');
 
 /**
  * Verifica si el archivo es un Excel válido
@@ -41,77 +41,47 @@ const isValidExcelFile = (filePath) => {
  * @param {Array} detailsRows - Filas de detalles de la orden
  * @returns {Promise} - Promesa que resuelve cuando se ha procesado la orden
  */
-const processOrder = (orderHeader, detailsRows) => {
-  return new Promise((resolve, reject) => {
+const processOrder = async (orderHeader, detailsRows) => {
+  // Iniciar transacción
+  const connection = await db.promisePool.getConnection();
+  await connection.beginTransaction();
+  
+  try {
     const orderDate = convertDate(orderHeader['fecha']);
     
-    // Usar transacción para asegurar la integridad de los datos
-    db.beginTransaction(async (transactionErr) => {
-      if (transactionErr) {
-        return reject(transactionErr);
-      }
+    // Insertar cliente (si no existe)
+    await connection.query(
+      `INSERT IGNORE INTO Customers (id, name) VALUES (?, ?)`,
+      [orderHeader['idcliente'], orderHeader['clientebis']]
+    );
+    
+    // Insertar orden
+    await connection.query(
+      `INSERT INTO Orders (number, ticket, total, date, id) VALUES (?, ?, ?, ?, ?)`,
+      [orderHeader['num'], orderHeader['numero'], orderHeader['total'], orderDate, orderHeader['idcliente']]
+    );
+    
+    // Insertar detalles
+    for (const row of detailsRows) {
+      const pieces = calculatePieces(row['descripcio'], row['cantidad']);
       
-      try {
-        // Insertar cliente
-        await new Promise((resolveCustomer, rejectCustomer) => {
-          db.query(
-            `INSERT IGNORE INTO Customers (id, name) VALUES (?, ?)`,
-            [orderHeader['idcliente'], orderHeader['clientebis']],
-            (customerErr) => {
-              if (customerErr) {
-                return rejectCustomer(customerErr);
-              }
-              resolveCustomer();
-            }
-          );
-        });
-        
-        // Insertar orden
-        await new Promise((resolveOrder, rejectOrder) => {
-          db.query(
-            `INSERT INTO Orders (number, ticket, total, date, id) VALUES (?, ?, ?, ?, ?)`,
-            [orderHeader['num'], orderHeader['numero'], orderHeader['total'], orderDate, orderHeader['idcliente']],
-            (orderErr) => {
-              if (orderErr) {
-                return rejectOrder(orderErr);
-              }
-              resolveOrder();
-            }
-          );
-        });
-        
-        // Insertar detalles
-        for (const row of detailsRows) {
-          const pieces = calculatePieces(row['descripcio'], row['cantidad']);
-          
-          await new Promise((resolveDetail, rejectDetail) => {
-            db.query(
-              `INSERT INTO OrderDetails (number, process, description, pieces, quantity, date, price) 
-               VALUES (?, ?, ?, ?, ?, ?, ?)`,
-              [row['num'], row['proceso'], row['descripcio'], pieces, row['cantidad'], orderDate, row['nimplinea']],
-              (detailErr) => {
-                if (detailErr) {
-                  return rejectDetail(detailErr);
-                }
-                resolveDetail();
-              }
-            );
-          });
-        }
-        
-        // Confirmar transacción
-        db.commit((commitErr) => {
-          if (commitErr) {
-            db.rollback(() => reject(commitErr));
-            return;
-          }
-          resolve();
-        });
-      } catch (error) {
-        db.rollback(() => reject(error));
-      }
-    });
-  });
+      await connection.query(
+        `INSERT INTO OrderDetails (number, process, description, pieces, quantity, date, price) 
+         VALUES (?, ?, ?, ?, ?, ?, ?)`,
+        [row['num'], row['proceso'], row['descripcio'], pieces, row['cantidad'], orderDate, row['nimplinea']]
+      );
+    }
+    
+    // Confirmar transacción
+    await connection.commit();
+    connection.release();
+    
+  } catch (error) {
+    // Revertir transacción en caso de error
+    await connection.rollback();
+    connection.release();
+    throw error;
+  }
 };
 
 exports.uploadExcel = async (req, res) => {

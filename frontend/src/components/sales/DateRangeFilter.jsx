@@ -40,6 +40,9 @@ const DateRangeFilter = ({
         end = new Date(now.getFullYear(), 11, 31);
         break;
       default:
+
+      start = new Date(now.getFullYear(), 0, 1);
+      end = new Date(now.getFullYear(), 11, 31);
         return;
     }
 

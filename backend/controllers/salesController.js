@@ -6,8 +6,6 @@ const { validateSaleData } = require('../validations/salesValidation');
  * Crear una nueva venta
  */
 exports.createSale = async (req, res) => {
-  let connection = null;
-  
   try {
     // Registrar datos de entrada para depuración
     console.log('Datos de venta recibidos:', JSON.stringify(req.body, null, 2));
@@ -39,9 +37,12 @@ exports.createSale = async (req, res) => {
       new Date().toISOString().slice(0, 19).replace('T', ' ');
     
     // Iniciar transacción
+    const connection = await db.promisePool.getConnection();
+    await connection.beginTransaction();
+    
     try {
       // Insertar venta principal
-      const [saleResult] = await db.promise().query(
+      const [saleResult] = await connection.query(
         `INSERT INTO Sales (
           date, 
           total, 
@@ -63,8 +64,8 @@ exports.createSale = async (req, res) => {
       const saleId = saleResult.insertId;
       
       // Insertar items de venta
-      const itemQueries = items.map(item => 
-        db.promise().query(
+      for (const item of items) {
+        await connection.query(
           `INSERT INTO SaleItems (
             sale_id, 
             product_name, 
@@ -81,11 +82,12 @@ exports.createSale = async (req, res) => {
             parseInt(item.quantity) || 1,
             parseFloat(item.price) * parseInt(item.quantity)
           ]
-        )
-      );
+        );
+      }
       
-      // Ejecutar todas las inserciones de items
-      await Promise.all(itemQueries);
+      // Confirmar transacción
+      await connection.commit();
+      connection.release();
       
       // Responder éxito
       console.log('Venta procesada exitosamente:', {
@@ -105,6 +107,10 @@ exports.createSale = async (req, res) => {
       });
       
     } catch (dbError) {
+      // Revertir transacción en caso de error
+      await connection.rollback();
+      connection.release();
+      
       console.error('Error al procesar la transacción de venta:', {
         message: dbError.message,
         sql: dbError.sql,
@@ -131,8 +137,6 @@ exports.createSale = async (req, res) => {
   }
 };
 
-// Los otros métodos (getAllSales, getSaleById, getSalesStats) 
-// permanecen igual que en la versión anterior
 /**
  * Obtener todas las ventas
  */
@@ -176,7 +180,7 @@ exports.getAllSales = async (req, res) => {
     
     query += ` ORDER BY date DESC`;
     
-    const [sales] = await db.promise().query(query, params);
+    const sales = await db.query(query, params);
     
     res.json(sales);
   } catch (error) {
@@ -196,7 +200,7 @@ exports.getSaleById = async (req, res) => {
     const { id } = req.params;
     
     // Fetch sale details
-    const [sales] = await db.promise().query(
+    const sales = await db.query(
       `SELECT * FROM Sales WHERE sale_id = ?`,
       [id]
     );
@@ -208,7 +212,7 @@ exports.getSaleById = async (req, res) => {
     const sale = sales[0];
     
     // Fetch sale items
-    const [items] = await db.promise().query(
+    const items = await db.query(
       `SELECT 
         product_name, 
         product_category, 
@@ -234,6 +238,7 @@ exports.getSaleById = async (req, res) => {
     });
   }
 };
+
 /**
  * Obtener estadísticas de ventas
  */
@@ -276,11 +281,11 @@ exports.getSalesStats = async (req, res) => {
     }
     
     // Estadísticas totales
-    const [totalStats] = await db.promise().query(`
+    const [totalStats] = await db.query(`
       SELECT 
         COUNT(*) as total_sales,
-        SUM(total) as revenue,
-        AVG(total) as average_sale,
+        COALESCE(SUM(total), 0) as revenue,
+        (CASE WHEN COUNT(*) > 0 THEN SUM(total)/COUNT(*) ELSE 0 END) as average_sale,
         COUNT(DISTINCT DATE(date)) as active_days,
         COUNT(DISTINCT customer_name) as total_customers
       FROM Sales
@@ -288,18 +293,18 @@ exports.getSalesStats = async (req, res) => {
     `, params);
     
     // Estadísticas por método de pago
-    const [paymentStats] = await db.promise().query(`
+    const paymentStats = await db.query(`
       SELECT 
         payment_method,
         COUNT(*) as count,
-        SUM(total) as total
+        COALESCE(SUM(total), 0) as total
       FROM Sales
       WHERE ${dateFilter}
       GROUP BY payment_method
     `, params);
     
     // Productos más vendidos
-    const [topProducts] = await db.promise().query(`
+    const topProducts = await db.query(`
       SELECT 
         product_name,
         product_category,
@@ -314,7 +319,7 @@ exports.getSalesStats = async (req, res) => {
     `, params);
     
     // Clientes principales
-    const [topCustomers] = await db.promise().query(`
+    const topCustomers = await db.query(`
       SELECT 
         customer_name,
         COUNT(*) as visits,

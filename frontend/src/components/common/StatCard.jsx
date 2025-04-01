@@ -2,36 +2,49 @@ import { motion, AnimatePresence } from 'framer-motion'
 import React from 'react'
 
 const StatCard = ({ name, icon: Icon, type, value, color, trend, time, isLoading }) => {
-  const stringValue = (value === undefined || value === null) ? '' : value.toString()
+  // Sanitizar el valor para evitar errores con null o undefined
+  let stringValue = '';
+  let numericValue = 0;
+  let formattedValue = '';
 
-  // Elimina todos los caracteres excepto dígitos, punto y signo negativo
-  const cleanedValue = stringValue.replace(/[^0-9.-]+/g, '')
-  const numericValue = parseFloat(cleanedValue)
+  if (value !== undefined && value !== null) {
+    stringValue = String(value);
+    
+    // Elimina todos los caracteres excepto dígitos, punto y signo negativo
+    const cleanedValue = stringValue.replace(/[^0-9.-]+/g, '');
+    numericValue = parseFloat(cleanedValue);
+    
+    // Formatear el valor si es un número válido
+    if (!isNaN(numericValue) && isFinite(numericValue)) {
+      formattedValue = numericValue.toLocaleString(undefined, {
+        minimumFractionDigits: 0,
+        maximumFractionDigits: 2,
+      });
+    } else {
+      // Si no es un número válido, usar el valor original
+      formattedValue = value;
+    }
+  }
 
-  let formattedValue =
-    !isNaN(numericValue) && isFinite(numericValue)
-      ? numericValue.toLocaleString(undefined, {
-          minimumFractionDigits: 0,
-          maximumFractionDigits: 2,
-        })
-      : value
-
+  // Añadir símbolos según el tipo
   if (type === 'Percentage') {
-    formattedValue += '%'
+    formattedValue += '%';
   } else if (type === 'Money') {
-    formattedValue = `$${formattedValue}`
+    formattedValue = `$${formattedValue}`;
   }
   
+  // Formatear el texto de tiempo
+  let timeText = '';
   if (time === undefined) {
-    time = 'desde el mes pasado'
+    timeText = 'desde el mes pasado';
   } else if (time !== 'semana') {
-    time = `desde el ${time} pasado`
+    timeText = `desde el ${time} pasado`;
   } else {
-    time = `desde la ${time} pasada`
+    timeText = `desde la ${time} pasada`;
   }
 
   // Determina el color del trend según si es negativo o positivo
-  const trendColor = trend && trend.toString().includes('-') ? '#EF4444' : '#22C55E'
+  const trendColor = trend && String(trend).includes('-') ? '#EF4444' : '#22C55E';
 
   return (
     <motion.div
@@ -77,12 +90,17 @@ const StatCard = ({ name, icon: Icon, type, value, color, trend, time, isLoading
               <p className="mt-4 text-4xl font-semibold" style={{ color: '#E0E7FF' }}>
                 {formattedValue}
               </p>
-              {trend && (
+              {trend !== undefined && trend !== null && (
                 <div className="flex gap-2 ml-2 mt-6">
                   <span className="text-sm font-medium" style={{ color: trendColor }}>
-                    {`${trend}%`}
+                    {typeof trend === 'number' ? 
+                      `${trend.toLocaleString(undefined, {
+                        minimumFractionDigits: 0,
+                        maximumFractionDigits: 2
+                      })}%` 
+                      : `${trend}%`}
                   </span>
-                  <p className="text-xs text-gray-400 p-1">{time}</p>
+                  <p className="text-xs text-gray-400 p-1">{timeText}</p>
                 </div>
               )}
             </div>
