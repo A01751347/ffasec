@@ -3,10 +3,10 @@ require('dotenv').config();
 const express = require('express');
 const cors = require('cors');
 const path = require('path');
-const helmet = require('helmet'); // Añadido para seguridad
+const helmet = require('helmet');
 const { notFound, errorHandler } = require('./middlewares/errorHandler');
-const rateLimit = require('express-rate-limit'); // Para limitar peticiones
-const routes = require('./routes'); // Importar todas las rutas
+const rateLimit = require('express-rate-limit');
+const routes = require('./routes');
 
 const app = express();
 const PORT = process.env.PORT || 5002;
@@ -28,18 +28,15 @@ app.use(helmet({
       "script-src": ["'self'", "'unsafe-inline'"],
     },
   }
-})); // Seguridad con las cabeceras HTTP
+})); 
 app.use(cors({
   origin: process.env.CORS_ORIGIN || '*',
   methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
   allowedHeaders: ['Content-Type', 'Authorization']
 }));
-app.use(limiter); // Aplicar limitación de peticiones
+app.use(limiter);
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
-
-// Servir archivos estáticos del frontend
-app.use(express.static(path.join(__dirname, '../frontend/dist')));
 
 // Configurar directorio de uploads
 app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
@@ -47,16 +44,21 @@ app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
 // Aplicar todas las rutas bajo /api
 app.use('/api', routes);
 
-// Middleware para rutas no encontradas
+// Servir archivos estáticos del frontend
+app.use(express.static(path.join(__dirname, '../frontend/dist')));
+
+// Para cualquier otra ruta, servir el frontend (SPA)
+// IMPORTANTE: Esta ruta debe estar después de todas las demás rutas API
+app.get('*', (req, res) => {
+  res.sendFile(path.join(__dirname, '../frontend/dist/index.html'));
+});
+
+// Middleware para rutas no encontradas debe venir después del fallback a index.html
+// para evitar que capture rutas SPA
 app.use(notFound);
 
 // Middleware para manejo de errores
 app.use(errorHandler);
-
-// Para cualquier otra ruta, servir el frontend (SPA)
-app.get('*', (req, res) => {
-  res.sendFile(path.join(__dirname, '../frontend/dist/index.html'));
-});
 
 // Iniciar el servidor
 const server = app.listen(PORT, () => {
@@ -98,4 +100,4 @@ function shutDown() {
   }, 10000);
 }
 
-module.exports = server; // Para testing
+module.exports = server;
