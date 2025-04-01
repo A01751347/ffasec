@@ -1,7 +1,7 @@
 // dashboardStats.js
 const express = require('express');
 const router = express.Router();
-const db = require('../config/db').promise();
+const db = require('../config/db');
 
 // Helper para formatear fecha a YYYY-MM-DD
 const formatDate = (date) => date.toISOString().split('T')[0];
