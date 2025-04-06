@@ -44,7 +44,10 @@ const InventoryDetails = () => {
     e.preventDefault();
     
     try {
-      await addInventoryMutation.mutateAsync({ registro: parseInt(newRegistro, 10) });
+      console.log("Valor de newRegistro antes de mutar:", newRegistro);
+await addInventoryMutation.mutateAsync({ registro: parseInt(newRegistro, 10) });
+
+      
       showNotification("Registro agregado correctamente", "success");
       setNewRegistro("");
       setShowAddForm(false);

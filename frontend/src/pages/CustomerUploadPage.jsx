@@ -1,10 +1,13 @@
-// frontend/src/pages/CustomerUploadPage.jsx
+// frontend/src/pages/CustomerUploadPage.jsx (mejorado)
 import React, { useState, useEffect } from 'react';
 import { Settings, Database, AlertTriangle } from 'lucide-react';
 import CustomerExcelUpload from '../components/CustomerExcelUpload';
 import LoadingSpinner from '../components/ui/LoadingSpinner';
+import { customerUploadService } from '../services/customerUploadService';
+import { useAppContext } from '../context/AppContext';
 
 const CustomerUploadPage = () => {
+  const { showNotification } = useAppContext();
   const [dbStatus, setDbStatus] = useState(null);
   const [loading, setLoading] = useState(true);
   const [setupNeeded, setSetupNeeded] = useState(false);
@@ -23,20 +26,20 @@ const CustomerUploadPage = () => {
       setLoading(true);
       setError(null);
 
-      const response = await fetch('/api/upload/check-structure');
-      const data = await response.json();
-
-      if (response.ok) {
-        setDbStatus(data);
+      const response = await customerUploadService.checkStructure();
+      
+      if (response.success) {
+        setDbStatus(response.data);
         setSetupNeeded(false);
       } else {
-        console.warn('Respuesta no OK de la API:', data);
-        setDbStatus(data);
-        setSetupNeeded(data.needsSetup || false);
+        console.warn('Respuesta no OK de la API:', response.error);
+        setDbStatus(response.data);
+        setSetupNeeded(response.data?.needsSetup || false);
       }
     } catch (err) {
       console.error('Error al verificar estructura de BD:', err);
       setError('Error al comunicarse con el servidor. Verifica tu conexión.');
+      showNotification('Error al verificar la estructura de la base de datos', 'error');
     } finally {
       setLoading(false);
     }
@@ -49,30 +52,26 @@ const CustomerUploadPage = () => {
       setError(null);
       setSetupResult(null);
 
-      const response = await fetch('/api/upload/setup-table', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json'
-        }
-      });
-
-      const data = await response.json();
-
-      if (response.ok) {
-        setSetupResult(data);
+      const response = await customerUploadService.setupTable();
+      
+      if (response.success) {
+        setSetupResult(response.data);
         setSetupNeeded(false);
+        showNotification('Tabla configurada correctamente', 'success');
         // Verificar estructura nuevamente para actualizarla
         await checkDatabaseStructure();
       } else {
-        setError(data.error || 'No se pudo configurar la tabla');
+        setError(response.error || 'No se pudo configurar la tabla');
         setSetupResult({
           success: false,
-          message: data.error
+          message: response.error
         });
+        showNotification('Error al configurar la tabla: ' + response.error, 'error');
       }
     } catch (err) {
       console.error('Error al configurar tabla:', err);
       setError('Error al comunicarse con el servidor. Verifica tu conexión.');
+      showNotification('Error al configurar la tabla', 'error');
     } finally {
       setSetupInProgress(false);
     }

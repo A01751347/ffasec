@@ -1,14 +1,18 @@
-// frontend/src/components/CustomerExcelUpload.jsx
+// frontend/src/components/CustomerExcelUpload.jsx (mejorado)
 import React, { useState } from 'react';
 import { Upload, CheckCircle, AlertCircle, FileText, X } from 'lucide-react';
 import LoadingSpinner from './ui/LoadingSpinner';
+import { customerUploadService } from '../services/customerUploadService';
+import { useAppContext } from '../context/AppContext';
 
 const CustomerExcelUpload = () => {
+  const { showNotification } = useAppContext();
   const [file, setFile] = useState(null);
   const [uploading, setUploading] = useState(false);
   const [result, setResult] = useState(null);
   const [error, setError] = useState(null);
   const [preview, setPreview] = useState(null);
+  const [uploadProgress, setUploadProgress] = useState(0);
 
   // Función para manejar la selección de archivos
   const handleFileChange = (e) => {
@@ -53,27 +57,30 @@ const CustomerExcelUpload = () => {
     setUploading(true);
     setError(null);
     setResult(null);
+    setUploadProgress(0);
     
     try {
-      const response = await fetch('/api/upload/customers', {
-        method: 'POST',
-        body: formData,
-      });
+      // Usar el servicio para cargar el archivo
+      const response = await customerUploadService.uploadCustomers(
+        formData,
+        (progress) => setUploadProgress(progress)
+      );
       
-      if (!response.ok) {
-        const errorData = await response.json();
-        throw new Error(errorData.error || 'Error al procesar el archivo');
+      if (response.success) {
+        setResult(response.data);
+        setFile(null);
+        setPreview(null);
+        showNotification('Archivo procesado correctamente', 'success');
+      } else {
+        throw new Error(response.error || 'Error al procesar el archivo');
       }
-      
-      const data = await response.json();
-      setResult(data);
-      setFile(null);
-      setPreview(null);
     } catch (err) {
       console.error('Error al subir archivo:', err);
       setError(err.message || 'Ocurrió un error al procesar el archivo');
+      showNotification('Error al cargar el archivo: ' + err.message, 'error');
     } finally {
       setUploading(false);
+      setUploadProgress(0);
     }
   };
 
@@ -167,6 +174,21 @@ const CustomerExcelUpload = () => {
               <X size={20} />
             </button>
           </div>
+        </div>
+      )}
+      
+      {/* Barra de progreso */}
+      {uploading && uploadProgress > 0 && (
+        <div className="mb-6">
+          <div className="h-2 bg-gray-700 rounded-full overflow-hidden">
+            <div 
+              className="h-full bg-blue-500 transition-all duration-300"
+              style={{ width: `${uploadProgress}%` }}
+            ></div>
+          </div>
+          <p className="text-center text-sm text-gray-400 mt-1">
+            Procesando: {uploadProgress}%
+          </p>
         </div>
       )}
       

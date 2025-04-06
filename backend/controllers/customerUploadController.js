@@ -1,4 +1,4 @@
-// backend/controllers/customerUploadController.js
+// backend/controllers/customerUploadController.js (corregido)
 const xlsx = require('xlsx');
 const db = require('../config/db');
 const fs = require('fs');
@@ -47,12 +47,12 @@ exports.uploadCustomersExcel = async (req, res) => {
     try {
       // Procesar cada fila del Excel
       for (const row of jsonData) {
-        // Extraer los datos de la fila
-        // Aquí asumimos que el Excel tiene las columnas "Nombre", "Telefono" e "ID"
-        // Adaptamos los nombres según estén en el Excel
-        const clientName = row.Nombre || row.nombre || row.NOMBRE || row.Name || row.NAME || row[Object.keys(row)[0]];
-        const clientPhone = row.Telefono || row.telefono || row.TELEFONO || row.Phone || row.PHONE || row[Object.keys(row)[1]];
-        const clientId = row.ID || row.Id || row.id || row[Object.keys(row)[2]];
+        // Obtenemos las primeras tres columnas en el orden específico
+        // Columna A: Nombre, Columna B: Teléfono, Columna C: ID
+        const clientName = row['Nombre'] || null;
+const clientPhone = row['Teléfono'] || null;
+const clientId = row['ID'] || null;
+
 
         // Validar campos requeridos
         if (!clientName || !clientId) {

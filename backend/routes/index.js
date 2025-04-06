@@ -1,4 +1,4 @@
-// backend/routes/index.js
+// backend/routes/index.js (actualizado)
 const express = require('express');
 const router = express.Router();
 
@@ -14,6 +14,7 @@ const categoryDistributionRoutes = require('./categoryDistribution');
 const salesOverviewRoutes = require('./salesOverview');
 const productsRoutes = require('./products');
 const salesRoutes = require('./salesRoutes');
+const customerUploadRoutes = require('./customerUploadRoutes'); // Agregamos esta línea
 
 // Aplicar todas las rutas con sus prefijos
 router.use('/customers', customerRoutes);
@@ -21,6 +22,7 @@ router.use('/orders', orderRoutes);
 router.use('/inventario', inventoryRoutes);
 router.use('/files', fileRoutes);
 router.use('/upload', uploadRoutes);
+router.use('/upload', customerUploadRoutes); // Agregamos esta línea
 router.use('/dailyReport', reportRoutes);
 router.use('/dashboardStats', dashboardStatsRoutes);
 router.use('/categoryDistribution', categoryDistributionRoutes);
