@@ -1,15 +1,25 @@
-// inventoryController.js
+// backend/controllers/inventoryController.js
 const db = require('../config/db');
 
 exports.addInventory = async (req, res) => {
   try {
+    console.log('addInventory - Datos recibidos:', req.body);
     const { registro } = req.body;
-    if (typeof registro !== 'number') {
-      return res.status(400).json({ error: 'El registro debe ser un número' });
+    
+    // Validar que registro sea un número
+    if (typeof registro !== 'number' && isNaN(parseInt(registro))) {
+      console.error('Error: El registro debe ser un número válido', { received: registro, type: typeof registro });
+      return res.status(400).json({ error: 'El registro debe ser un número válido' });
     }
     
+    const registroNumerico = parseInt(registro, 10);
+    console.log('addInventory - Valor numérico a insertar:', registroNumerico);
+    
     const query = `INSERT INTO Inventario (registro) VALUES (?)`;
-    const result = await db.query(query, [registro]);
+    console.log('addInventory - Ejecutando consulta:', query);
+    
+    const result = await db.query(query, [registroNumerico]);
+    console.log('addInventory - Resultado de la inserción:', result);
     
     res.json({ 
       message: 'Registro agregado correctamente', 
@@ -23,9 +33,20 @@ exports.addInventory = async (req, res) => {
 
 exports.getInventory = async (req, res) => {
   try {
+    console.log('getInventory - Obteniendo todos los registros de inventario');
     const query = `SELECT * FROM Inventario`;
+    
     const results = await db.query(query);
-    res.json(results);
+    console.log(`getInventory - Se obtuvieron ${results.length} registros`);
+    
+    // Asegurar que los datos son del formato correcto antes de enviarlos
+    const formattedResults = results.map(item => ({
+      registro: parseInt(item.registro) || 0,
+      // Incluir otros campos si existen
+      ...item
+    }));
+    
+    res.json(formattedResults);
   } catch (err) {
     console.error('Error al obtener inventario:', err);
     res.status(500).json({ error: err.message });
@@ -34,6 +55,9 @@ exports.getInventory = async (req, res) => {
 
 exports.getInventoryDetails = async (req, res) => {
   try {
+    console.log('getInventoryDetails - Obteniendo detalles enriquecidos de inventario');
+    
+    // Consulta mejorada con mejor manejo de JOIN y resultados NULL
     const query = `
       SELECT 
         i.registro AS ticket,
@@ -41,13 +65,24 @@ exports.getInventoryDetails = async (req, res) => {
         c.name,
         i.telefono
       FROM Inventario i
-      JOIN Orders o ON i.registro = o.ticket
-      JOIN Customers c ON o.id = c.id
-      ORDER BY i.registro;
+      LEFT JOIN Orders o ON i.registro = o.ticket
+      LEFT JOIN Customers c ON o.id = c.id
+      ORDER BY i.registro
     `;
     
+    console.log('getInventoryDetails - Ejecutando consulta:', query);
     const results = await db.query(query);
-    res.json(results);
+    console.log(`getInventoryDetails - Se obtuvieron ${results.length} registros`);
+    
+    // Formatear correctamente los resultados
+    const formattedResults = results.map(item => ({
+      ticket: parseInt(item.ticket) || 0,
+      date: item.date,
+      name: item.name || 'No disponible',
+      telefono: item.telefono || '',
+    }));
+    
+    res.json(formattedResults);
   } catch (err) {
     console.error('Error al obtener detalles de inventario:', err);
     res.status(500).json({ error: err.message });
@@ -57,13 +92,37 @@ exports.getInventoryDetails = async (req, res) => {
 // Función para actualizar (PUT)
 exports.updateInventory = async (req, res) => {
   try {
+    console.log('updateInventory - Datos recibidos:', { 
+      params: req.params,
+      body: req.body 
+    });
+    
     const { ticket } = req.params;
     const { telefono } = req.body;
     
-    const query = `UPDATE Inventario SET telefono = ? WHERE registro = ?`;
-    await db.query(query, [telefono, ticket]);
+    if (!ticket || isNaN(parseInt(ticket))) {
+      console.error('Error: Ticket inválido', { received: ticket });
+      return res.status(400).json({ error: 'Ticket inválido' });
+    }
     
-    res.json({ message: 'Registro actualizado correctamente' });
+    const ticketNumerico = parseInt(ticket, 10);
+    console.log('updateInventory - Actualizando registro:', ticketNumerico);
+    
+    const query = `UPDATE Inventario SET telefono = ? WHERE registro = ?`;
+    const result = await db.query(query, [telefono, ticketNumerico]);
+    
+    console.log('updateInventory - Resultado de la actualización:', result);
+    
+    // Verificar si el registro existía
+    if (result.affectedRows === 0) {
+      console.warn(`No se encontró inventario con ticket ${ticketNumerico}`);
+      return res.status(404).json({ error: 'No se encontró el registro' });
+    }
+    
+    res.json({ 
+      message: 'Registro actualizado correctamente',
+      ticket: ticketNumerico
+    });
   } catch (err) {
     console.error('Error al actualizar inventario:', err);
     res.status(500).json({ error: err.message });
@@ -73,12 +132,32 @@ exports.updateInventory = async (req, res) => {
 // Función para eliminar (DELETE)
 exports.deleteInventory = async (req, res) => {
   try {
+    console.log('deleteInventory - Params recibidos:', req.params);
     const { ticket } = req.params;
     
-    const query = `DELETE FROM Inventario WHERE registro = ?`;
-    await db.query(query, [ticket]);
+    if (!ticket || isNaN(parseInt(ticket))) {
+      console.error('Error: Ticket inválido', { received: ticket });
+      return res.status(400).json({ error: 'Ticket inválido' });
+    }
     
-    res.json({ message: 'Registro eliminado correctamente' });
+    const ticketNumerico = parseInt(ticket, 10);
+    console.log('deleteInventory - Eliminando registro:', ticketNumerico);
+    
+    const query = `DELETE FROM Inventario WHERE registro = ?`;
+    const result = await db.query(query, [ticketNumerico]);
+    
+    console.log('deleteInventory - Resultado de la eliminación:', result);
+    
+    // Verificar si el registro existía
+    if (result.affectedRows === 0) {
+      console.warn(`No se encontró inventario con ticket ${ticketNumerico}`);
+      return res.status(404).json({ error: 'No se encontró el registro' });
+    }
+    
+    res.json({ 
+      message: 'Registro eliminado correctamente',
+      ticket: ticketNumerico
+    });
   } catch (err) {
     console.error('Error al eliminar inventario:', err);
     res.status(500).json({ error: err.message });

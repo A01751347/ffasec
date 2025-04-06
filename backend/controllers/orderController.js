@@ -9,8 +9,12 @@ exports.getOrderByTicket = async (req, res) => {
   try {
     const ticket = req.params.ticket;
     
+    // Log detallado para depuración
+    console.log(`getOrderByTicket - Buscando orden con ticket: ${ticket}`);
+    
     // Validación básica
     if (!ticket) {
+      console.log('getOrderByTicket - Error: Se requiere un número de ticket');
       return res.status(400).json({ error: 'Se requiere un número de ticket' });
     }
     
@@ -36,11 +40,19 @@ exports.getOrderByTicket = async (req, res) => {
     `;
 
     const results = await db.query(query, [ticket]);
-
-    // Si no se encontró ninguna fila, la orden no existe
+    console.log(`getOrderByTicket - Resultados obtenidos: ${results.length} filas`);
+    
+    // Verificar resultados
     if (results.length === 0) {
-      return res.status(404).json({ message: 'No se encontró la orden con ese ticket.' });
+      console.log(`getOrderByTicket - No se encontró orden con ticket: ${ticket}`);
+      return res.status(404).json({ 
+        message: 'No se encontró la orden con ese ticket.',
+        success: false
+      });
     }
+
+    // Log para depuración de la primera fila
+    console.log('getOrderByTicket - Primera fila de resultados:', JSON.stringify(results[0]));
 
     // Estructurar respuesta
     const orderData = {
@@ -58,8 +70,8 @@ exports.getOrderByTicket = async (req, res) => {
       // validamos para no meter objetos vacíos
       if (row.process || row.description || row.pieces || row.price) {
         orderData.details.push({
-          process: row.process,
-          description: row.description,
+          process: row.process || '',
+          description: row.description || '',
           pieces: row.pieces || 0,
           quantity: row.quantity || 0,
           date: row.detailDate,
@@ -68,6 +80,10 @@ exports.getOrderByTicket = async (req, res) => {
       }
     });
 
+    // Log para depuración de la respuesta final
+    console.log('getOrderByTicket - Respuesta estructurada:', JSON.stringify(orderData));
+
+    // Enviar respuesta
     res.json(orderData);
   } catch (err) {
     console.error('Error al buscar orden por ticket:', err);
@@ -86,8 +102,13 @@ exports.getAllOrders = async (req, res) => {
     const limit = parseInt(req.query.limit) || 20;
     const offset = (page - 1) * limit;
     
+    console.log(`getAllOrders - Página: ${page}, Límite: ${limit}`);
+    
     // Obtener conteo total para la paginación
-    const [countResults] = await db.query('SELECT COUNT(DISTINCT o.number) as total FROM Orders o');
+    const countQuery = 'SELECT COUNT(DISTINCT o.number) as total FROM Orders o';
+    const [countResults] = await db.query(countQuery);
+    console.log('getAllOrders - Resultado de conteo:', countResults);
+    
     const totalOrders = countResults[0]?.total || 0;
     const totalPages = Math.ceil(totalOrders / limit);
     
@@ -107,6 +128,7 @@ exports.getAllOrders = async (req, res) => {
     `;
     
     const orderResults = await db.query(orderQuery, [limit, offset]);
+    console.log(`getAllOrders - Se obtuvieron ${orderResults.length} órdenes`);
     
     // Si no hay órdenes, devolver array vacío con metadatos de paginación
     if (orderResults.length === 0) {
@@ -140,6 +162,7 @@ exports.getAllOrders = async (req, res) => {
     `;
     
     const detailsResults = await db.query(detailsQuery, [orderNumbers]);
+    console.log(`getAllOrders - Se obtuvieron ${detailsResults.length} detalles de órdenes`);
     
     // Agrupar detalles por número de orden
     const detailsByOrder = {};
@@ -149,8 +172,8 @@ exports.getAllOrders = async (req, res) => {
       }
       
       detailsByOrder[detail.number].push({
-        process: detail.process,
-        description: detail.description,
+        process: detail.process || '',
+        description: detail.description || '',
         pieces: detail.pieces || 0,
         quantity: detail.quantity || 0,
         date: detail.detailDate,
@@ -165,7 +188,7 @@ exports.getAllOrders = async (req, res) => {
       date: order.date,
       id: order.id,
       name: order.name,
-      total: order.total,
+      total: parseFloat(order.total || 0),
       details: detailsByOrder[order.number] || []
     }));
     
@@ -185,10 +208,6 @@ exports.getAllOrders = async (req, res) => {
   }
 };
 
-/**
- * Obtener todas las órdenes de un cliente, con detalles anidados.
- * Implementa paginación para mejorar rendimiento.
- */
 exports.getOrdersByCustomer = async (req, res) => {
   try {
     const customerId = req.params.customerId;
@@ -196,21 +215,33 @@ exports.getOrdersByCustomer = async (req, res) => {
     const limit = parseInt(req.query.limit) || 20;
     const offset = (page - 1) * limit;
     
+    console.log(`====== DEPURACIÓN: getOrdersByCustomer =======`);
+    console.log(`INICIO: Cliente ${customerId}, Página ${page}, Límite ${limit}`);
+    
     // Validación básica
     if (!customerId) {
+      console.log('ERROR: Se requiere un ID de cliente');
       return res.status(400).json({ error: 'Se requiere un ID de cliente' });
     }
     
     // Obtener conteo total de órdenes del cliente
-    const [countResults] = await db.query(
-      'SELECT COUNT(*) as total FROM Orders WHERE id = ?',
-      [customerId]
-    );
+    console.log(`EJECUTANDO: Consulta de conteo de órdenes`);
+    let countResults = [];
     
-    const totalOrders = countResults[0]?.total || 0;
+    try {
+      countResults = await db.query('SELECT COUNT(*) as total FROM Orders WHERE id = ?', [customerId]);
+      console.log(`RESULTADO CONTEO: ${JSON.stringify(countResults)}`);
+    } catch (countError) {
+      console.error(`ERROR EN CONTEO: ${countError.message}`);
+      throw new Error(`Error al contar órdenes: ${countError.message}`);
+    }
+    
+    const totalOrders = parseInt(countResults[0]?.total || 0);
+    console.log(`TOTAL DE ÓRDENES: ${totalOrders}`);
     
     // Si no hay órdenes, devolver array vacío
     if (totalOrders === 0) {
+      console.log(`SIN ÓRDENES: Cliente ${customerId} no tiene órdenes`);
       return res.json({
         data: [],
         pagination: {
@@ -223,6 +254,7 @@ exports.getOrdersByCustomer = async (req, res) => {
     }
     
     const totalPages = Math.ceil(totalOrders / limit);
+    console.log(`PAGINACIÓN: Total de páginas ${totalPages}`);
     
     // Obtener órdenes del cliente con paginación
     const orderQuery = `
@@ -237,13 +269,24 @@ exports.getOrdersByCustomer = async (req, res) => {
       LIMIT ? OFFSET ?
     `;
     
-    const orderResults = await db.query(orderQuery, [customerId, limit, offset]);
+    console.log(`EJECUTANDO: Consulta de órdenes`);
+    console.log(`SQL: ${orderQuery}`);
+    console.log(`PARÁMETROS: [${customerId}, ${limit}, ${offset}]`);
     
-    // Extraer números de orden para buscar detalles
-    const orderNumbers = orderResults.map(order => order.number);
+    let orderResults = [];
+    
+    try {
+      orderResults = await db.query(orderQuery, [customerId, limit, offset]);
+      console.log(`ÓRDENES OBTENIDAS: ${orderResults.length}`);
+      console.log(`PRIMERA ORDEN: ${orderResults.length > 0 ? JSON.stringify(orderResults[0]) : 'ninguna'}`);
+    } catch (ordersError) {
+      console.error(`ERROR EN ÓRDENES: ${ordersError.message}`);
+      throw new Error(`Error al obtener órdenes: ${ordersError.message}`);
+    }
     
     // Si no hay órdenes en esta página, devolver array vacío con metadatos
-    if (orderNumbers.length === 0) {
+    if (orderResults.length === 0) {
+      console.log(`SIN RESULTADOS: No hay órdenes en la página ${page}`);
       return res.json({
         data: [],
         pagination: {
@@ -255,66 +298,42 @@ exports.getOrdersByCustomer = async (req, res) => {
       });
     }
     
-    // Obtener detalles de las órdenes
-    const detailsQuery = `
-      SELECT
-        number,
-        process,
-        description,
-        pieces,
-        quantity,
-        date as detailDate,
-        price
-      FROM OrderDetails
-      WHERE number IN (?)
-      ORDER BY number, process, description
-    `;
-    
-    const detailsResults = await db.query(detailsQuery, [orderNumbers]);
-    
-    // Agrupar detalles por número de orden
-    const detailsByOrder = {};
-    detailsResults.forEach(detail => {
-      if (!detailsByOrder[detail.number]) {
-        detailsByOrder[detail.number] = [];
-      }
-      
-      detailsByOrder[detail.number].push({
-        process: detail.process,
-        description: detail.description,
-        pieces: detail.pieces || 0,
-        quantity: detail.quantity || 0,
-        date: detail.detailDate,
-        price: detail.price || 0
-      });
-    });
-    
-    // Combinar órdenes con sus detalles
-    const ordersWithDetails = orderResults.map(order => ({
+    // Preparar una respuesta simplificada sin detalles adicionales
+    const simplifiedOrders = orderResults.map(order => ({
       number: order.number,
       ticket: order.ticket,
-      total: order.total,
+      total: parseFloat(order.total || 0),
       date: order.orderDate,
-      customerId: parseInt(customerId),
-      details: detailsByOrder[order.number] || []
+      customerId: parseInt(customerId)
     }));
     
-    // Enviar respuesta con metadatos de paginación
-    res.json({
-      data: ordersWithDetails,
+    // En este punto, simplificamos y no buscamos los detalles de las órdenes
+    // para enfocarnos en solucionar el problema principal
+    
+    const response = {
+      data: simplifiedOrders,
       pagination: {
         page,
         limit,
         totalItems: totalOrders,
         totalPages
       }
-    });
+    };
+    
+    console.log(`RESPUESTA FINAL: ${simplifiedOrders.length} órdenes`);
+    console.log(`MUESTRA DE DATOS: ${JSON.stringify(simplifiedOrders.slice(0, 2))}`);
+    console.log(`====== FIN DEPURACIÓN ======`);
+    
+    res.json(response);
   } catch (err) {
-    console.error('Error al obtener órdenes del cliente:', err);
-    res.status(500).json({ error: err.message });
+    console.error(`ERROR CRÍTICO: ${err.message}`);
+    console.error(err.stack);
+    res.status(500).json({ 
+      error: err.message,
+      success: false
+    });
   }
 };
-
 /**
  * Obtener todas las órdenes de una fecha específica.
  * Retorna un array de órdenes para la fecha solicitada.
@@ -323,13 +342,17 @@ exports.getOrdersByDate = async (req, res) => {
   try {
     const { date } = req.query;
     
+    console.log(`getOrdersByDate - Fecha: ${date}`);
+    
     // Validación básica
     if (!date) {
+      console.log('getOrdersByDate - Error: Se requiere el parámetro de fecha');
       return res.status(400).json({ error: 'Se requiere el parámetro de fecha (formato YYYY-MM-DD)' });
     }
     
     // Validar formato de fecha
     if (!/^\d{4}-\d{2}-\d{2}$/.test(date)) {
+      console.log(`getOrdersByDate - Error: Formato de fecha inválido: ${date}`);
       return res.status(400).json({ error: 'Formato de fecha inválido. Use YYYY-MM-DD' });
     }
     
@@ -349,8 +372,19 @@ exports.getOrdersByDate = async (req, res) => {
     `;
     
     const orders = await db.query(query, [date]);
+    console.log(`getOrdersByDate - Se obtuvieron ${orders.length} órdenes para la fecha ${date}`);
     
-    res.json(orders);
+    // Asegurar formato de datos consistente
+    const formattedOrders = orders.map(order => ({
+      number: order.number,
+      ticket: order.ticket,
+      date: order.date,
+      id: order.id,
+      total: parseFloat(order.total || 0),
+      name: order.name || 'Sin nombre'
+    }));
+    
+    res.json(formattedOrders);
   } catch (err) {
     console.error('Error al obtener órdenes por fecha:', err);
     res.status(500).json({ error: err.message });

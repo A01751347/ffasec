@@ -2,52 +2,86 @@
 const mysql = require('mysql2');
 require('dotenv').config();
 
-console.log('Intentando conectar con configuración:', {
-  host: process.env.DB_HOST,
-  user: process.env.DB_USER,
-  database: process.env.DB_DATABASE
+// Mejor log de configuración con valores reales
+console.log('Intentando conectar a MySQL con configuración:', {
+  host: process.env.DB_HOST || 'localhost',
+  user: process.env.DB_USER || 'root',
+  password: process.env.DB_PASSWORD ? '********' : '', // Ocultar contraseña real
+  database: process.env.DB_DATABASE || 'ASEC_DB',
+  connectionLimit: 10
 });
 
-// Crear pool de conexiones en lugar de una sola conexión
+// Crear pool de conexiones
 const pool = mysql.createPool({
   host: process.env.DB_HOST || 'localhost',
   user: process.env.DB_USER || 'root',
   password: process.env.DB_PASSWORD || '',
-  database: process.env.DB_DATABASE,
+  database: process.env.DB_DATABASE || 'ASEC_DB',
   waitForConnections: true,
   connectionLimit: 10,
   queueLimit: 0
 });
 
-// Exportar la promesa de conexión para usar async/await
+// Convertir el pool a promesas para usar async/await
 const promisePool = pool.promise();
 
-// Comprobar conexión al iniciar
+// Comprobar conexión al iniciar y realizar consulta de prueba
 pool.getConnection((err, connection) => {
   if (err) {
-    console.error('Error de conexión a MySQL:', {
+    console.error('Error crítico de conexión a MySQL:', {
       errorCode: err.code,
       errorMessage: err.message,
       fatal: err.fatal
     });
     return;
   }
-  console.log('Conexión exitosa a MySQL');
-  connection.release(); // Liberar la conexión
+  
+  console.log('Conexión inicial a MySQL exitosa');
+  
+  // Realizar consulta de prueba
+  connection.query('SELECT 1 AS test', (queryErr, results) => {
+    if (queryErr) {
+      console.error('Error en consulta de prueba:', queryErr);
+    } else {
+      console.log('Consulta de prueba exitosa:', results);
+    }
+    connection.release(); // Liberar la conexión
+  });
 });
 
-// Exportamos tanto el pool normal (para callbacks) como el promise pool
-module.exports = {
-  query: (sql, params) => {
-    return new Promise((resolve, reject) => {
-      pool.query(sql, params, (error, results) => {
-        if (error) {
-          return reject(error);
-        }
-        return resolve(results);
+// Wrapper para consultas que incluye mejor logging
+const query = (sql, params) => {
+  // Log para depuración
+  console.log(`Ejecutando consulta: ${sql}`);
+  console.log('Parámetros:', JSON.stringify(params));
+
+  return new Promise((resolve, reject) => {
+    const startTime = Date.now();
+    
+    pool.query(sql, params, (error, results) => {
+      const executionTime = Date.now() - startTime;
+      
+      if (error) {
+        console.error(`Error en consulta (${executionTime}ms):`, {
+          sql,
+          params,
+          errorMessage: error.message,
+          errorCode: error.code
+        });
+        return reject(error);
+      }
+      
+      console.log(`Consulta exitosa (${executionTime}ms):`, {
+        rowCount: Array.isArray(results) ? results.length : (results.affectedRows || 0)
       });
+      
+      return resolve(results);
     });
-  },
+  });
+};
+
+module.exports = {
+  query,
   pool,
   promisePool
 };

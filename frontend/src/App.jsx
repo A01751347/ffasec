@@ -8,6 +8,7 @@ const DashboardPage = lazy(() => import("./pages/DashboardPage"));
 const InventoryPage = lazy(() => import("./pages/InventoryPage"));
 const OrdersPage = lazy(() => import("./pages/OrdersPage"));
 const UploadPage = lazy(() => import("./pages/UploadPage"));
+const CustomerUploadPage = lazy(() => import("./pages/CustomerUploadPage"));
 const ReportPage = lazy(() => import("./pages/ReportPage"));
 const CustomersPage = lazy(() => import("./pages/CustomersPage"));
 const POSPage = lazy(() => import("./pages/POSPage")); 
@@ -32,6 +33,7 @@ function App() {
             <Route path="/inventory" element={<InventoryPage />} />
             <Route path="/orders" element={<OrdersPage />} />
             <Route path="/upload" element={<UploadPage />} />
+            <Route path="/customerUpload" element={<CustomerUploadPage />} />
             <Route path="/report" element={<ReportPage />} />
             <Route path="/customers" element={<CustomersPage />} />
             <Route path="/pos" element={<POSPage />} />

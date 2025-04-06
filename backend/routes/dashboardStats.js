@@ -1,10 +1,15 @@
-// dashboardStats.js
+// backend/routes/dashboardStats.js
 const express = require('express');
 const router = express.Router();
 const db = require('../config/db');
 
-// Helper para formatear fecha a YYYY-MM-DD
-const formatDate = (date) => date.toISOString().split('T')[0];
+// Helper para formatear fecha a YYYY-MM-DD de forma consistente
+const formatDate = (date) => {
+  if (!date) return null;
+  return date instanceof Date 
+    ? date.toISOString().split('T')[0]
+    : String(date).split('T')[0];
+};
 
 // Helper para restar meses a una fecha (ej: 6 meses, 3 meses)
 function subtractMonths(date, months) {
@@ -13,37 +18,65 @@ function subtractMonths(date, months) {
   return d;
 }
 
-// Helper para calcular variación porcentual
+// Helper para calcular variación porcentual con mejor manejo de casos especiales
 function calcTrend(current, previous) {
-  if (previous === 0) return current > 0 ? 100 : 0;
-  return previous > 0 ? ((current - previous) / previous) * 100 : null;
+  // Convertir a números si son strings
+  current = typeof current === 'string' ? parseFloat(current) : current;
+  previous = typeof previous === 'string' ? parseFloat(previous) : previous;
+  
+  // Validar que sean números
+  if (isNaN(current)) current = 0;
+  if (isNaN(previous)) previous = 0;
+  
+  // Manejar caso especial de previous = 0
+  if (previous === 0) {
+    return current > 0 ? 100 : 0;
+  }
+  
+  // Calcular tendencia (nunca retornar null)
+  const trend = ((current - previous) / previous) * 100;
+  
+  // Devolver con 2 decimales para evitar números enormes
+  return parseFloat(trend.toFixed(2));
 }
 
 router.get('/', async (req, res) => {
   try {
+    // Registrar parámetros recibidos para depuración
+    console.log('Parámetros recibidos:', req.query);
     const { from, to, period } = req.query;
 
     // ------------------------------------------------------------------
     // 1) Si se envían "from" y "to", se usa esa lógica para filtrar por rango
     // ------------------------------------------------------------------
     if (from && to) {
+      console.log(`Procesando estadísticas con rango: ${from} a ${to}`);
+      
       // Prendas totales en rango
-      const [totalPiecesResults] = await db.query(
-        `SELECT COALESCE(SUM(od.pieces), 0) AS totalPiecesRange
-         FROM OrderDetails od
-         JOIN Orders o ON od.number = o.number
-         WHERE o.date BETWEEN ? AND ?`,
-        [from, to]
-      );
+      const totalPiecesQuery = `
+        SELECT COALESCE(SUM(od.pieces), 0) AS totalPiecesRange
+        FROM OrderDetails od
+        JOIN Orders o ON od.number = o.number
+        WHERE o.date BETWEEN ? AND ?
+      `;
+      
+      console.log('Ejecutando consulta de piezas totales');
+      const [totalPiecesResults] = await db.promisePool.query(totalPiecesQuery, [from, to]);
+      console.log('Resultado de piezas totales:', totalPiecesResults);
+      
       const totalPiecesRange = parseFloat(totalPiecesResults[0]?.totalPiecesRange || 0);
 
       // Ventas totales en rango
-      const [totalSalesResults] = await db.query(
-        `SELECT COALESCE(SUM(total), 0) AS totalSalesRange
-         FROM Orders
-         WHERE date BETWEEN ? AND ?`,
-        [from, to]
-      );
+      const totalSalesQuery = `
+        SELECT COALESCE(SUM(total), 0) AS totalSalesRange
+        FROM Orders
+        WHERE date BETWEEN ? AND ?
+      `;
+      
+      console.log('Ejecutando consulta de ventas totales');
+      const [totalSalesResults] = await db.promisePool.query(totalSalesQuery, [from, to]);
+      console.log('Resultado de ventas totales:', totalSalesResults);
+      
       const totalSalesRange = parseFloat(totalSalesResults[0]?.totalSalesRange || 0);
 
       return res.json({
@@ -57,6 +90,7 @@ router.get('/', async (req, res) => {
     //    (semana, mes, trimestre, año)
     // ------------------------------------------------------------------
     else if (period) {
+      console.log(`Procesando estadísticas con periodo: ${period}`);
       let currentStart, previousStart, previousEnd;
       const currentEndDate = new Date();
 
@@ -105,102 +139,150 @@ router.get('/', async (req, res) => {
       const previousStartStr = formatDate(previousStart);
       const previousEndStr = formatDate(previousEnd);
 
-      // Ventas, órdenes, clientes, etc.
-      const [currentOrdersResult] = await db.query(
-        `SELECT COUNT(*) AS totalOrders, COALESCE(SUM(total), 0) AS totalSales 
-         FROM Orders 
-         WHERE date BETWEEN ? AND ?`,
-        [currentStartStr, currentEndStr]
-      );
+      // Log para depurar
+      console.log('Rango actual:', currentStartStr, 'a', currentEndStr);
+      console.log('Rango anterior:', previousStartStr, 'a', previousEndStr);
+
+      // Ventas, órdenes, clientes, etc. en periodo actual
+      const currentOrdersQuery = `
+        SELECT COUNT(*) AS totalOrders, COALESCE(SUM(total), 0) AS totalSales 
+        FROM Orders 
+        WHERE date BETWEEN ? AND ?
+      `;
+      
+      console.log('Ejecutando consulta de órdenes actuales');
+      const [currentOrdersResult] = await db.promisePool.query(currentOrdersQuery, [currentStartStr, currentEndStr]);
+      console.log('Resultado de órdenes actuales:', currentOrdersResult);
+      
       const currentOrders = parseInt(currentOrdersResult[0]?.totalOrders || 0);
       const currentSales = parseFloat(currentOrdersResult[0]?.totalSales || 0);
       const currentAverageTicket = currentOrders > 0 ? (currentSales / currentOrders) : 0;
 
-      const [currentCustomersResult] = await db.query(
-        `SELECT COUNT(DISTINCT id) AS totalCustomers 
-         FROM Orders 
-         WHERE date BETWEEN ? AND ?`,
-        [currentStartStr, currentEndStr]
-      );
+      const currentCustomersQuery = `
+        SELECT COUNT(DISTINCT id) AS totalCustomers 
+        FROM Orders 
+        WHERE date BETWEEN ? AND ?
+      `;
+      
+      console.log('Ejecutando consulta de clientes actuales');
+      const [currentCustomersResult] = await db.promisePool.query(currentCustomersQuery, [currentStartStr, currentEndStr]);
+      console.log('Resultado de clientes actuales:', currentCustomersResult);
+      
       const currentCustomers = parseInt(currentCustomersResult[0]?.totalCustomers || 0);
 
-      const [currentPiecesResult] = await db.query(
-        `SELECT COALESCE(SUM(od.pieces), 0) AS totalPieces 
-         FROM OrderDetails od
-         JOIN Orders o ON od.number = o.number
-         WHERE o.date BETWEEN ? AND ?`,
-        [currentStartStr, currentEndStr]
-      );
+      const currentPiecesQuery = `
+        SELECT COALESCE(SUM(od.pieces), 0) AS totalPieces 
+        FROM OrderDetails od
+        JOIN Orders o ON od.number = o.number
+        WHERE o.date BETWEEN ? AND ?
+      `;
+      
+      console.log('Ejecutando consulta de piezas actuales');
+      const [currentPiecesResult] = await db.promisePool.query(currentPiecesQuery, [currentStartStr, currentEndStr]);
+      console.log('Resultado de piezas actuales:', currentPiecesResult);
+      
       const currentPieces = parseInt(currentPiecesResult[0]?.totalPieces || 0);
 
       // Período anterior
-      const [previousOrdersResult] = await db.query(
-        `SELECT COUNT(*) AS totalOrders, COALESCE(SUM(total), 0) AS totalSales 
-         FROM Orders 
-         WHERE date BETWEEN ? AND ?`,
-        [previousStartStr, previousEndStr]
-      );
+      const previousOrdersQuery = `
+        SELECT COUNT(*) AS totalOrders, COALESCE(SUM(total), 0) AS totalSales 
+        FROM Orders 
+        WHERE date BETWEEN ? AND ?
+      `;
+      
+      console.log('Ejecutando consulta de órdenes anteriores');
+      const [previousOrdersResult] = await db.promisePool.query(previousOrdersQuery, [previousStartStr, previousEndStr]);
+      console.log('Resultado de órdenes anteriores:', previousOrdersResult);
+      
       const previousOrders = parseInt(previousOrdersResult[0]?.totalOrders || 0);
       const previousSales = parseFloat(previousOrdersResult[0]?.totalSales || 0);
       const previousAverageTicket = previousOrders > 0 ? (previousSales / previousOrders) : 0;
 
-      const [previousCustomersResult] = await db.query(
-        `SELECT COUNT(DISTINCT id) AS totalCustomers 
-         FROM Orders 
-         WHERE date BETWEEN ? AND ?`,
-        [previousStartStr, previousEndStr]
-      );
+      const previousCustomersQuery = `
+        SELECT COUNT(DISTINCT id) AS totalCustomers 
+        FROM Orders 
+        WHERE date BETWEEN ? AND ?
+      `;
+      
+      console.log('Ejecutando consulta de clientes anteriores');
+      const [previousCustomersResult] = await db.promisePool.query(previousCustomersQuery, [previousStartStr, previousEndStr]);
+      console.log('Resultado de clientes anteriores:', previousCustomersResult);
+      
       const previousCustomers = parseInt(previousCustomersResult[0]?.totalCustomers || 0);
 
-      const [previousPiecesResult] = await db.query(
-        `SELECT COALESCE(SUM(od.pieces), 0) AS totalPieces 
-         FROM OrderDetails od
-         JOIN Orders o ON od.number = o.number
-         WHERE o.date BETWEEN ? AND ?`,
-        [previousStartStr, previousEndStr]
-      );
+      const previousPiecesQuery = `
+        SELECT COALESCE(SUM(od.pieces), 0) AS totalPieces 
+        FROM OrderDetails od
+        JOIN Orders o ON od.number = o.number
+        WHERE o.date BETWEEN ? AND ?
+      `;
+      
+      console.log('Ejecutando consulta de piezas anteriores');
+      const [previousPiecesResult] = await db.promisePool.query(previousPiecesQuery, [previousStartStr, previousEndStr]);
+      console.log('Resultado de piezas anteriores:', previousPiecesResult);
+      
       const previousPieces = parseInt(previousPiecesResult[0]?.totalPieces || 0);
 
-      const trends = {
-        orders: calcTrend(currentOrders, previousOrders),
-        averageTicket: calcTrend(currentAverageTicket, previousAverageTicket),
-        customers: calcTrend(currentCustomers, previousCustomers),
-        pieces: calcTrend(currentPieces, previousPieces),
-        sales: calcTrend(currentSales, previousSales)
-      };
+      // Calcular tendencias con mejor manejo de casos especiales
+      const ordersTrend = calcTrend(currentOrders, previousOrders);
+      const averageTicketTrend = calcTrend(currentAverageTicket, previousAverageTicket);
+      const customersTrend = calcTrend(currentCustomers, previousCustomers);
+      const piecesTrend = calcTrend(currentPieces, previousPieces);
+      const salesTrend = calcTrend(currentSales, previousSales);
+
+      // Log para depurar tendencias
+      console.log('Tendencias calculadas:', {
+        ordersTrend,
+        averageTicketTrend,
+        customersTrend,
+        piecesTrend,
+        salesTrend
+      });
 
       return res.json({
         current: {
           orders: currentOrders,
-          averageTicket: currentAverageTicket,
+          averageTicket: parseFloat(currentAverageTicket.toFixed(2)),
           customers: currentCustomers,
           pieces: currentPieces,
         },
         previous: {
           orders: previousOrders,
-          averageTicket: previousAverageTicket,
+          averageTicket: parseFloat(previousAverageTicket.toFixed(2)),
           customers: previousCustomers,
           pieces: previousPieces,
         },
-        trends,
+        trends: {
+          orders: ordersTrend,
+          averageTicket: averageTicketTrend,
+          customers: customersTrend,
+          pieces: piecesTrend,
+          sales: salesTrend
+        },
         totalSales: currentSales,
         newClients: currentCustomers,
         totalPieces: currentPieces,
-        changePercentage: trends.sales
+        changePercentage: salesTrend
       });
     }
 
     // ------------------------------------------------------------------
-    // 3) Lógica por defecto (sin "from/to" ni "period")
+    // 3) Lógica por defecto (sin "from/to" ni "period") - Todo el año
     // ------------------------------------------------------------------
     else {
+      console.log('Procesando estadísticas para el año completo (por defecto)');
+      
       // 3.1) Hallar la última fecha de orden en el año actual
-      const [lastDateResult] = await db.query(`
+      const lastDateQuery = `
         SELECT MAX(date) AS lastOrderDate
         FROM Orders
         WHERE YEAR(date) = YEAR(CURRENT_DATE())
-      `);
-
+      `;
+      
+      console.log('Ejecutando consulta de última fecha');
+      const [lastDateResult] = await db.promisePool.query(lastDateQuery);
+      console.log('Resultado de última fecha:', lastDateResult);
+      
       let lastOrderDate = lastDateResult[0]?.lastOrderDate;
       // Si no hay órdenes este año, tomamos la fecha actual como fallback
       if (!lastOrderDate) {
@@ -225,142 +307,193 @@ router.get('/', async (req, res) => {
       const previousStartStr = formatDate(previousStart);
       const previousEndStr = formatDate(previousEnd);
 
+      // Log para depurar rangos
+      console.log('Rango actual año completo:', currentStartStr, 'a', currentEndStr);
+      console.log('Rango anterior año completo:', previousStartStr, 'a', previousEndStr);
+
       // --- Ventas Totales en rango actual
-      const [currentSalesResult] = await db.query(
-        `SELECT COALESCE(SUM(total), 0) AS totalSales 
-         FROM Orders 
-         WHERE date BETWEEN ? AND ?`,
-        [currentStartStr, currentEndStr]
-      );
+      const currentSalesQuery = `
+        SELECT COALESCE(SUM(total), 0) AS totalSales 
+        FROM Orders 
+        WHERE date BETWEEN ? AND ?
+      `;
+      
+      console.log('Ejecutando consulta de ventas actuales - año completo');
+      const [currentSalesResult] = await db.promisePool.query(currentSalesQuery, [currentStartStr, currentEndStr]);
+      console.log('Resultado de ventas actuales - año completo:', currentSalesResult);
+      
       const currentSales = parseFloat(currentSalesResult[0]?.totalSales || 0);
 
       // --- Ventas Totales en rango anterior
-      const [previousSalesResult] = await db.query(
-        `SELECT COALESCE(SUM(total), 0) AS totalSales 
-         FROM Orders 
-         WHERE date BETWEEN ? AND ?`,
-        [previousStartStr, previousEndStr]
-      );
+      const previousSalesQuery = `
+        SELECT COALESCE(SUM(total), 0) AS totalSales 
+        FROM Orders 
+        WHERE date BETWEEN ? AND ?
+      `;
+      
+      console.log('Ejecutando consulta de ventas anteriores - año completo');
+      const [previousSalesResult] = await db.promisePool.query(previousSalesQuery, [previousStartStr, previousEndStr]);
+      console.log('Resultado de ventas anteriores - año completo:', previousSalesResult);
+      
       const previousSales = parseFloat(previousSalesResult[0]?.totalSales || 0);
 
       // --- Cambio porcentual de ventas
       const changePercentage = calcTrend(currentSales, previousSales);
 
       // --- Nuevos clientes (primer compra en el rango actual)
-      const [currentNewClientsResult] = await db.query(
-        `SELECT COUNT(*) AS newClients 
-         FROM (
-           SELECT id, MIN(date) AS firstOrder
-           FROM Orders
-           GROUP BY id
-           HAVING MIN(date) BETWEEN ? AND ?
-         ) AS t`,
-        [currentStartStr, currentEndStr]
-      );
+      const currentNewClientsQuery = `
+        SELECT COUNT(*) AS newClients 
+        FROM (
+          SELECT id, MIN(date) AS firstOrder
+          FROM Orders
+          GROUP BY id
+          HAVING MIN(date) BETWEEN ? AND ?
+        ) AS t
+      `;
+      
+      console.log('Ejecutando consulta de nuevos clientes - año completo');
+      const [currentNewClientsResult] = await db.promisePool.query(currentNewClientsQuery, [currentStartStr, currentEndStr]);
+      console.log('Resultado de nuevos clientes - año completo:', currentNewClientsResult);
+      
       const newClients = parseInt(currentNewClientsResult[0]?.newClients || 0);
 
       // --- Nuevos clientes en el rango anterior (para comparación)
-      const [previousNewClientsResult] = await db.query(
-        `SELECT COUNT(*) AS newClients 
-         FROM (
-           SELECT id, MIN(date) AS firstOrder
-           FROM Orders
-           GROUP BY id
-           HAVING MIN(date) BETWEEN ? AND ?
-         ) AS t`,
-        [previousStartStr, previousEndStr]
-      );
+      const previousNewClientsQuery = `
+        SELECT COUNT(*) AS newClients 
+        FROM (
+          SELECT id, MIN(date) AS firstOrder
+          FROM Orders
+          GROUP BY id
+          HAVING MIN(date) BETWEEN ? AND ?
+        ) AS t
+      `;
+      
+      console.log('Ejecutando consulta de nuevos clientes anteriores - año completo');
+      const [previousNewClientsResult] = await db.promisePool.query(previousNewClientsQuery, [previousStartStr, previousEndStr]);
+      console.log('Resultado de nuevos clientes anteriores - año completo:', previousNewClientsResult);
+      
       const oldNewClients = parseInt(previousNewClientsResult[0]?.newClients || 0);
       const newClientsTrend = calcTrend(newClients, oldNewClients);
 
       // --- Prendas totales en el rango actual
-      const [currentPiecesResult] = await db.query(
-        `SELECT COALESCE(SUM(od.pieces), 0) AS totalPieces
-         FROM OrderDetails od
-         JOIN Orders o ON od.number = o.number
-         WHERE o.date BETWEEN ? AND ?`,
-        [currentStartStr, currentEndStr]
-      );
+      const currentPiecesQuery = `
+        SELECT COALESCE(SUM(od.pieces), 0) AS totalPieces
+        FROM OrderDetails od
+        JOIN Orders o ON od.number = o.number
+        WHERE o.date BETWEEN ? AND ?
+      `;
+      
+      console.log('Ejecutando consulta de piezas totales - año completo');
+      const [currentPiecesResult] = await db.promisePool.query(currentPiecesQuery, [currentStartStr, currentEndStr]);
+      console.log('Resultado de piezas totales - año completo:', currentPiecesResult);
+      
       const totalPieces = parseInt(currentPiecesResult[0]?.totalPieces || 0);
 
       // --- Prendas totales en el rango anterior (para comparar)
-      const [previousPiecesResult] = await db.query(
-        `SELECT COALESCE(SUM(od.pieces), 0) AS totalPieces
-         FROM OrderDetails od
-         JOIN Orders o ON od.number = o.number
-         WHERE o.date BETWEEN ? AND ?`,
-        [previousStartStr, previousEndStr]
-      );
+      const previousPiecesQuery = `
+        SELECT COALESCE(SUM(od.pieces), 0) AS totalPieces
+        FROM OrderDetails od
+        JOIN Orders o ON od.number = o.number
+        WHERE o.date BETWEEN ? AND ?
+      `;
+      
+      console.log('Ejecutando consulta de piezas anteriores - año completo');
+      const [previousPiecesResult] = await db.promisePool.query(previousPiecesQuery, [previousStartStr, previousEndStr]);
+      console.log('Resultado de piezas anteriores - año completo:', previousPiecesResult);
+      
       const oldPieces = parseInt(previousPiecesResult[0]?.totalPieces || 0);
       const piecesTrend = calcTrend(totalPieces, oldPieces);
 
       // --- Ordenes en Inventario
-      const [inventoryCountResult] = await db.query(
-        `SELECT COUNT(*) AS inventoryCount
-         FROM Inventario`
-      );
+      const inventoryCountQuery = `
+        SELECT COUNT(*) AS inventoryCount
+        FROM Inventario
+      `;
+      
+      console.log('Ejecutando consulta de inventario');
+      const [inventoryCountResult] = await db.promisePool.query(inventoryCountQuery);
+      console.log('Resultado de inventario:', inventoryCountResult);
+      
       const inventoryCount = parseInt(inventoryCountResult[0]?.inventoryCount || 0);
 
       // --- Clientes Frecuentes: más de 5 órdenes en últimos 6 meses
       const sixMonthsAgo = subtractMonths(currentEnd, 6);
       const sixMonthsAgoStr = formatDate(sixMonthsAgo);
-      const [frequentResult] = await db.query(
-        `SELECT COUNT(*) AS frequentClients
-         FROM (
-           SELECT id, COUNT(*) AS orderCount
-           FROM Orders
-           WHERE date BETWEEN ? AND ?
-           GROUP BY id
-           HAVING COUNT(*) > 5
-         ) AS sub`,
-        [sixMonthsAgoStr, currentEndStr]
-      );
+      
+      const frequentQuery = `
+        SELECT COUNT(*) AS frequentClients
+        FROM (
+          SELECT id, COUNT(*) AS orderCount
+          FROM Orders
+          WHERE date BETWEEN ? AND ?
+          GROUP BY id
+          HAVING COUNT(*) > 5
+        ) AS sub
+      `;
+      
+      console.log('Ejecutando consulta de clientes frecuentes');
+      const [frequentResult] = await db.promisePool.query(frequentQuery, [sixMonthsAgoStr, currentEndStr]);
+      console.log('Resultado de clientes frecuentes:', frequentResult);
+      
       const frequentClients = parseInt(frequentResult[0]?.frequentClients || 0);
 
       // --- Clientes Perdidos: sin órdenes en los últimos 3 meses
       const threeMonthsAgo = subtractMonths(currentEnd, 3);
       const threeMonthsAgoStr = formatDate(threeMonthsAgo);
-      const [lostResult] = await db.query(
-        `SELECT COUNT(*) AS lostClients
-         FROM Customers c
-         WHERE EXISTS (
-           SELECT 1 
-           FROM Orders o
-           WHERE o.id = c.id
-         )
-         AND NOT EXISTS (
-           SELECT 1 
-           FROM Orders o
-           WHERE o.id = c.id
-             AND o.date > ?
-         )`,
-        [threeMonthsAgoStr]
-      );
+      
+      const lostQuery = `
+        SELECT COUNT(*) AS lostClients
+        FROM Customers c
+        WHERE EXISTS (
+          SELECT 1 
+          FROM Orders o
+          WHERE o.id = c.id
+        )
+        AND NOT EXISTS (
+          SELECT 1 
+          FROM Orders o
+          WHERE o.id = c.id
+            AND o.date > ?
+        )
+      `;
+      
+      console.log('Ejecutando consulta de clientes perdidos');
+      const [lostResult] = await db.promisePool.query(lostQuery, [threeMonthsAgoStr]);
+      console.log('Resultado de clientes perdidos:', lostResult);
+      
       const lostClients = parseInt(lostResult[0]?.lostClients || 0);
 
-      // --- Retornar datos finales
-      return res.json({
+      // --- Respuesta final, asegurando que todos los campos son números válidos
+      const response = {
         // Lo que ya tenías:
-        totalSales: currentSales,
-        newClients,
-        totalPieces,
+        totalSales: parseFloat(currentSales.toFixed(2)),
+        newClients: newClients,
+        totalPieces: totalPieces,
         // El "cambio" vs. el año pasado:
-        changePercentage,
+        changePercentage: parseFloat(changePercentage.toFixed(2)),
         // Tendencias individuales
-        newClientsTrend,
-        piecesTrend,
+        newClientsTrend: parseFloat(newClientsTrend.toFixed(2)),
+        piecesTrend: parseFloat(piecesTrend.toFixed(2)),
         // Ordenes en Inventario
-        inventoryCount,
+        inventoryCount: inventoryCount,
         // Clientes Frecuentes y Perdidos
-        frequentClients,
-        lostClients,
+        frequentClients: frequentClients,
+        lostClients: lostClients,
         // Info textual para la UI
         infoRange: `Comparado desde el año pasado (del ${formatDate(previousStart)} al ${formatDate(previousEnd)})`
-      });
+      };
+      
+      // Log final para depurar respuesta completa
+      console.log('Respuesta final de dashboard por defecto:', response);
+      
+      return res.json(response);
     }
   } catch (err) {
-    console.error("Error fetching dashboard stats:", err);
-    res.status(500).json({ error: err.message });
+    console.error("Error crítico en dashboard stats:", err);
+    res.status(500).json({ 
+      error: err.message,
+      stack: process.env.NODE_ENV === 'development' ? err.stack : undefined 
+    });
   }
 });
 
