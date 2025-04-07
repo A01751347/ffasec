@@ -15,15 +15,32 @@ exports.addInventory = async (req, res) => {
     const registroNumerico = parseInt(registro, 10);
     console.log('addInventory - Valor numérico a insertar:', registroNumerico);
     
-    const query = `INSERT INTO Inventario (registro) VALUES (?)`;
+    // Primero, buscar si existe una orden con este ticket para obtener el ID del cliente
+    const orderQuery = `SELECT o.id, c.phone FROM Orders o 
+                        JOIN Customers c ON o.id = c.id 
+                        WHERE o.ticket = ?`;
+    const orderResults = await db.query(orderQuery, [registroNumerico]);
+    
+    // Determinar teléfono del cliente si está disponible
+    let telefono = null;
+    if (orderResults.length > 0) {
+      telefono = orderResults[0].phone || null;
+      console.log(`addInventory - Cliente encontrado con teléfono: ${telefono || 'No disponible'}`);
+    } else {
+      console.log('addInventory - No se encontró cliente asociado al ticket');
+    }
+    
+    // Ahora insertar en el inventario con el teléfono si está disponible
+    const query = `INSERT INTO Inventario (registro, telefono) VALUES (?, ?)`;
     console.log('addInventory - Ejecutando consulta:', query);
     
-    const result = await db.query(query, [registroNumerico]);
+    const result = await db.query(query, [registroNumerico, telefono]);
     console.log('addInventory - Resultado de la inserción:', result);
     
     res.json({ 
       message: 'Registro agregado correctamente', 
-      id: result.insertId 
+      id: result.insertId,
+      telefono: telefono
     });
   } catch (err) {
     console.error('Error al agregar inventario:', err);

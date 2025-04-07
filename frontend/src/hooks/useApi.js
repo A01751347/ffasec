@@ -53,6 +53,7 @@ export const useAddInventory = () => {
   const queryClient = useQueryClient();
   
   return useMutation(
+    // Pasar directamente el número al servicio, no el objeto completo
     (registro) => inventoryService.add(registro),
     {
       onSuccess: () => {
@@ -63,6 +64,7 @@ export const useAddInventory = () => {
     }
   );
 };
+
 
 export const useUpdateInventory = () => {
   const queryClient = useQueryClient();

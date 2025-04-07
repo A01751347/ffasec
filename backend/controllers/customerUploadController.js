@@ -1,4 +1,4 @@
-// backend/controllers/customerUploadController.js (corregido)
+// backend/controllers/customerUploadController.js
 const xlsx = require('xlsx');
 const db = require('../config/db');
 const fs = require('fs');
@@ -47,12 +47,10 @@ exports.uploadCustomersExcel = async (req, res) => {
     try {
       // Procesar cada fila del Excel
       for (const row of jsonData) {
-        // Obtenemos las primeras tres columnas en el orden específico
-        // Columna A: Nombre, Columna B: Teléfono, Columna C: ID
+        // Obtenemos las columnas en el orden específico
         const clientName = row['Nombre'] || null;
-const clientPhone = row['Teléfono'] || null;
-const clientId = row['ID'] || null;
-
+        const clientPhone = row['Teléfono'] || row['Telefono'] || null; // Aceptar ambas formas de escribir teléfono
+        const clientId = row['ID'] || null;
 
         // Validar campos requeridos
         if (!clientName || !clientId) {
@@ -75,7 +73,7 @@ const clientId = row['ID'] || null;
               [clientName, clientPhone || null, clientId]
             );
             updated++;
-            console.log(`Cliente actualizado - ID: ${clientId}, Nombre: ${clientName}`);
+            console.log(`Cliente actualizado - ID: ${clientId}, Nombre: ${clientName}, Teléfono: ${clientPhone || 'No proporcionado'}`);
           } catch (err) {
             errors++;
             errorDetails.push(`Error al actualizar cliente ID ${clientId}: ${err.message}`);
@@ -88,7 +86,7 @@ const clientId = row['ID'] || null;
               [clientId, clientName, clientPhone || null]
             );
             added++;
-            console.log(`Cliente añadido - ID: ${clientId}, Nombre: ${clientName}`);
+            console.log(`Cliente añadido - ID: ${clientId}, Nombre: ${clientName}, Teléfono: ${clientPhone || 'No proporcionado'}`);
           } catch (err) {
             errors++;
             errorDetails.push(`Error al añadir cliente ID ${clientId}: ${err.message}`);

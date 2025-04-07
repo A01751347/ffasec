@@ -32,7 +32,12 @@ export const orderService = {
 export const inventoryService = {
   getAll: () => api.get('/inventario'),
   getDetails: () => api.get('/inventario/details'),
-  add: (registro) => api.post('/inventario', { registro }),
+  // Asegurarse de que el registro esté formateado como un número en el objeto JSON
+  add: (registro) => {
+    console.log("API enviando registro:", registro, typeof registro);
+    return api.post('/inventario', { registro: Number(registro) })
+      .then(response => response.data); // Devolver los datos de la respuesta
+  },
   update: (ticket, telefono) => api.put(`/inventario/details/${ticket}`, { telefono }),
   remove: (ticket) => api.delete(`/inventario/details/${ticket}`),
 };

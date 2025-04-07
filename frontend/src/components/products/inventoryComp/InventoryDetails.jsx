@@ -39,16 +39,31 @@ const InventoryDetails = () => {
   const updateInventoryMutation = useUpdateInventory();
   const deleteInventoryMutation = useDeleteInventory();
 
-  // Agregar un nuevo registro
   const handleAddRegistroSubmit = async (e) => {
     e.preventDefault();
     
     try {
-      console.log("Valor de newRegistro antes de mutar:", newRegistro);
-await addInventoryMutation.mutateAsync({ registro: parseInt(newRegistro, 10) });
-
+      // Validar que newRegistro sea un número válido
+      if (!newRegistro || isNaN(parseInt(newRegistro, 10))) {
+        showNotification("Por favor, ingresa un número válido para el registro", "error");
+        return;
+      }
+  
+      // Convertir explícitamente a número entero y asegurarse de que sea válido
+      const registroNumerico = parseInt(newRegistro, 10);
+      console.log("Registro a agregar (valor numérico):", registroNumerico);
       
-      showNotification("Registro agregado correctamente", "success");
+      // Enviar solo el valor numérico, no un objeto
+      const result = await addInventoryMutation.mutateAsync(registroNumerico);
+      
+      let mensaje = "Registro agregado correctamente";
+      if (result?.telefono) {
+        mensaje += `. Teléfono del cliente: ${result.telefono}`;
+      } else {
+        mensaje += ". No se encontró teléfono del cliente.";
+      }
+      
+      showNotification(mensaje, "success");
       setNewRegistro("");
       setShowAddForm(false);
     } catch (error) {
