@@ -11,7 +11,7 @@ router.get('/:ticket', orderController.getOrderByTicket);
 
 // Ruta para buscar órdenes por cliente
 router.get('/byCustomer/:customerId', orderController.getOrdersByCustomer);
-
+ 
 // Ruta para traer todas las órdenes
 router.get('/', orderController.getAllOrders);
 

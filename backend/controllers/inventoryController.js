@@ -103,7 +103,7 @@ exports.getInventoryDetails = async (req, res) => {
   } catch (err) {
     console.error('Error al obtener detalles de inventario:', err);
     res.status(500).json({ error: err.message });
-  }
+  } 
 };
 
 // Función para actualizar (PUT)

@@ -178,7 +178,7 @@ exports.checkCustomersTable = async (req, res) => {
           needsSetup: true,
           currentColumns: columnNames
         });
-      }
+      } 
       
       // Si falta la columna phone, podemos intentar añadirla
       if (!hasPhoneColumn) {

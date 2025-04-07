@@ -8,7 +8,7 @@ exports.getDailyReport = async (req, res) => {
     // Validación de fecha
     if (!date || !/^\d{4}-\d{2}-\d{2}$/.test(date)) {
       return res.status(400).json({ error: 'Formato de fecha inválido. Formato esperado: YYYY-MM-DD' });
-    }
+    } 
     
     const query = `
       SELECT 

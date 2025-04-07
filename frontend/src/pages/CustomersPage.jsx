@@ -110,7 +110,7 @@ const CustomersPage = () => {
       <div className="mb-6">
         <h1 className="text-3xl font-bold text-white mb-2">Gestión de Clientes</h1>
         <p className="text-gray-400">Busca clientes y consulta su historial de órdenes</p>
-      </div>
+      </div> 
 
       <div className="bg-gray-800 bg-opacity-50 backdrop-blur-md shadow-lg rounded-xl border border-gray-700 p-6 mb-8">
         <h2 className="text-xl font-bold mb-4 text-white">Buscar Clientes</h2>

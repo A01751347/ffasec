@@ -12,7 +12,7 @@ import CategoryChart from '../components/data/CategoryChart';
 function capitalizeFirstLetter(val = '') {
   if (!val) return '';
   return val.charAt(0).toUpperCase() + val.slice(1);
-}
+} 
 
 // Función para formatear dinero
 function formatMoney(amount) {

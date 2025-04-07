@@ -27,7 +27,7 @@ export const orderService = {
   getAll: () => api.get('/orders'),
   getByTicket: (ticket) => api.get(`/orders/${ticket}`),
   getByCustomer: (customerId) => api.get(`/orders/byCustomer/${customerId}`),
-};
+}; 
 
 export const inventoryService = {
   getAll: () => api.get('/inventario'),

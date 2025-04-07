@@ -181,7 +181,7 @@ const OrdersPage = () => {
       <div className="mb-6">
         <h1 className="text-3xl font-bold text-white mb-2">Gestión de Órdenes</h1>
         <p className="text-gray-400">Busca órdenes por ticket, fecha o cliente</p>
-      </div>
+      </div> 
 
       {/* Panel de búsqueda */}
       <div className="bg-gray-800 bg-opacity-50 backdrop-blur-md shadow-lg rounded-xl border border-gray-700 p-6 mb-8">

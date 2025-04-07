@@ -78,7 +78,7 @@ const query = (sql, params) => {
       return resolve(results);
     });
   });
-};
+}; 
 
 module.exports = {
   query,

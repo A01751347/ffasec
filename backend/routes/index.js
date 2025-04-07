@@ -31,4 +31,4 @@ router.use('/products', productsRoutes);
 router.use('/sales', salesRoutes);
 
 // Exportar router con todas las rutas configuradas
-module.exports = router;
+module.exports = router; 

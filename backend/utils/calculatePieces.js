@@ -11,4 +11,4 @@ function calculatePieces(description, quantity) {
   }
   
   module.exports = { calculatePieces };
-  
+   

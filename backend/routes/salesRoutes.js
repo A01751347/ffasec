@@ -15,5 +15,5 @@ router.get('/:id', salesController.getSaleById);
 // Ruta para obtener estadísticas de ventas
 router.get('/stats/summary', salesController.getSalesStats);
 
-
+ 
 module.exports = router;

@@ -12,7 +12,7 @@ router.get('/', async (req, res) => {
     if (from && to) {
       dateCondition = "AND date BETWEEN ? AND ?";
       params.push(from, to);
-    }
+    } 
 
     const query = `
       SELECT

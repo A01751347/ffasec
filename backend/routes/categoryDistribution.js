@@ -9,7 +9,7 @@ router.get('/', async (req, res) => {
 
     if (!from || !to) {
       return res.status(400).json({ error: 'Faltan parámetros de fecha "from" o "to"' });
-    }
+    } 
 
     const sqlQuery = `
       WITH CategoryTotals AS (

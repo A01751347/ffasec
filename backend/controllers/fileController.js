@@ -68,7 +68,7 @@ exports.downloadFile = (req, res) => {
     });
   });
 };
-
+ 
 /**
  * Subir un archivo a la carpeta /uploads
  */

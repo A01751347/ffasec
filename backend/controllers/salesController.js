@@ -190,7 +190,7 @@ exports.getAllSales = async (req, res) => {
       details: error.message 
     });
   }
-};
+}; 
 
 /**
  * Obtener detalles de una venta por ID

@@ -24,7 +24,7 @@ const isValidExcelFile = (filePath) => {
     
     if (!validMimeTypes.includes(mimeType)) {
       return false;
-    }
+    } 
     
     // Intentar leer el archivo como Excel
     const workbook = xlsx.readFile(filePath, { cellDates: true });

@@ -11,7 +11,7 @@ const storage = multer.diskStorage({
     // Guardar en la carpeta uploads
     const uploadsDir = path.join(__dirname, '..', 'uploads');
     cb(null, uploadsDir);
-  },
+  }, 
   filename: (req, file, cb) => {
     // Generar nombre seguro: timestamp + nombre original sanitizado
     const timestamp = Date.now();

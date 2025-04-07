@@ -41,7 +41,7 @@ const UploadPage = () => {
     { name: 'Recurrentes', value: stats.frequentClients },
     { name: 'Nuevos', value: stats.newClients },
     { name: 'Perdidos', value: stats.lostClients },
-  ];
+  ]; 
 
   // Calcular total de clientes (opcional), para mostrar en la tarjeta
   const totalClients = stats.frequentClients + stats.newClients + stats.lostClients;

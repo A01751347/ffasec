@@ -78,4 +78,4 @@ exports.validateSaleData = (data) => {
     valid: errors.length === 0,
     errors
   };
-};
+}; 

@@ -17,7 +17,7 @@ const inventorySchema = {
     telefono: Joi.string().allow('', null)
   })
 };
-
+ 
 // Fecha (para reportes, filtros, etc.)
 const dateFilterSchema = Joi.object({
   from: Joi.date().iso().required().messages({

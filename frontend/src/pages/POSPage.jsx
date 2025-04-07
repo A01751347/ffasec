@@ -387,7 +387,7 @@ const POSPage = () => {
                   </li>
                 ))}
               </ul>
-
+ 
               <div className="border-t border-gray-700 pt-4 mb-4">
                 <div className="flex justify-between text-lg font-bold">
                   <span>Total:</span>

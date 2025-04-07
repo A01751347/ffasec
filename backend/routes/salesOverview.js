@@ -12,7 +12,7 @@ router.get('/', async (req, res) => {
       FROM Orders
       GROUP BY DATE_FORMAT(date, '%Y-%m')
       ORDER BY month ASC
-    `;
+    `; 
     
     const results = await db.query(query);
     

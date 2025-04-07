@@ -334,4 +334,4 @@ export default {
   reportService,
   fileService,
   uploadService
-};
+}; 

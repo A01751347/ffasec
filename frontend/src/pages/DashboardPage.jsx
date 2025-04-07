@@ -291,6 +291,6 @@ const DashboardPage = () => {
       </main>
     </div>
   );
-};
+}; 
 
 export default DashboardPage;

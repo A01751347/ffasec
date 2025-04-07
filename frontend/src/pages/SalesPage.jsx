@@ -236,6 +236,6 @@ const SalesPage = () => {
       </main>
     </div>
   );
-};
+}; 
 
 export default SalesPage;

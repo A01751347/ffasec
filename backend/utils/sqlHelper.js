@@ -16,7 +16,7 @@ const executeQuery = (query, params = []) => {
  * @param {string} query - Consulta SQL
  * @param {Array} params - Parámetros
  * @returns {Promise} - Promesa que resuelve con un solo registro o null
- */
+ */ 
 const getOne = async (query, params = []) => {
   const results = await executeQuery(query, params);
   return results.length > 0 ? results[0] : null;

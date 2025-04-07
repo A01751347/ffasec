@@ -24,7 +24,7 @@ router.get('/api/direct/customer-orders/:customerId', async (req, res) => {
       WHERE id = ? 
       ORDER BY date DESC
     `;
-    
+     
     // Usar directamente promisePool para obtener resultados sin capas adicionales
     const [results] = await db.promisePool.execute(query, [customerId]);
     

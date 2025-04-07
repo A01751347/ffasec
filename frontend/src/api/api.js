@@ -25,7 +25,7 @@ let setLoading = null;
 export const initializeApi = ({ showNotificationFn, setLoadingFn }) => {
   showNotification = showNotificationFn;
   setLoading = setLoadingFn;
-};
+}; 
 
 // Interceptores de petición
 api.interceptors.request.use(

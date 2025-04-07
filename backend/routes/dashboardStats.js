@@ -482,7 +482,7 @@ router.get('/', async (req, res) => {
         // Info textual para la UI
         infoRange: `Comparado desde el año pasado (del ${formatDate(previousStart)} al ${formatDate(previousEnd)})`
       };
-      
+       
       // Log final para depurar respuesta completa
       console.log('Respuesta final de dashboard por defecto:', response);
       

@@ -12,7 +12,7 @@ const uploadsDir = path.join(__dirname, '..', 'uploads');
 const storage = multer.diskStorage({
   destination: (req, file, cb) => {
     cb(null, uploadsDir);
-  },
+  }, 
   filename: (req, file, cb) => {
     // Crear nombre de archivo seguro: timestamp + nombre sanitizado
     const sanitizedFilename = path.basename(file.originalname).replace(/[^a-zA-Z0-9_.-]/g, '');

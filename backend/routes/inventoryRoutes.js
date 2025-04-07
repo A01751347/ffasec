@@ -13,7 +13,7 @@ router.get('/details', inventoryController.getInventoryDetails);
 
 // Agregar registro al inventario
 router.post('/', validator(inventorySchema.create), inventoryController.addInventory);
-
+ 
 // Actualizar registro por ticket
 router.put('/details/:ticket', validator(inventorySchema.update), inventoryController.updateInventory);
 

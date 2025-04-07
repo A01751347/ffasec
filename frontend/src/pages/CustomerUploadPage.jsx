@@ -157,7 +157,7 @@ const CustomerUploadPage = () => {
         <CustomerExcelUpload />
       )}
     </div>
-  );
+  ); 
 };
 
 export default CustomerUploadPage;

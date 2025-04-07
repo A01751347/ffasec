@@ -7,7 +7,7 @@ const api = axios.create({
   headers: {
     'Content-Type': 'application/json',
   },
-});
+}); 
 
 // Servicio para la carga de clientes
 export const customerUploadService = {
