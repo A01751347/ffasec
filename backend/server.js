@@ -45,12 +45,12 @@ app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
 app.use('/api', routes);
 
 // Servir archivos estáticos del frontend
-app.use(express.static(path.join(__dirname, '../frontend/dist')));
+app.use(express.static(path.join(__dirname, './dist')));
 
 // Para cualquier otra ruta, servir el frontend (SPA)
 // IMPORTANTE: Esta ruta debe estar después de todas las demás rutas API
 app.get('*', (req, res) => {
-  res.sendFile(path.join(__dirname, '../frontend/dist/index.html'));
+  res.sendFile(path.join(__dirname, './dist/index.html'));
 });
 
 // Middleware para rutas no encontradas debe venir después del fallback a index.html
