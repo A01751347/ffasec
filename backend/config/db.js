@@ -4,19 +4,19 @@ require('dotenv').config();
 
 // Mejor log de configuración con valores reales
 console.log('Intentando conectar a MySQL con configuración:', {
-  host: process.env.DB_HOST || 'localhost',
-  user: process.env.DB_USER || 'root',
-  password: process.env.DB_PASSWORD ? '********' : '', // Ocultar contraseña real
-  database: process.env.DB_DATABASE || 'ASEC_DB',
+  host: process.env.DB_HOST ,
+  user: process.env.DB_USER ,
+  password: process.env.DB_PASSWORD ,
+  database: process.env.DB_DATABASE ,
   connectionLimit: 10
 });
 
 // Crear pool de conexiones
 const pool = mysql.createPool({
-  host: process.env.DB_HOST || 'localhost',
-  user: process.env.DB_USER || 'root',
-  password: process.env.DB_PASSWORD || '',
-  database: process.env.DB_DATABASE || 'ASEC_DB',
+  host: process.env.DB_HOST ,
+  user: process.env.DB_USER ,
+  password: process.env.DB_PASSWORD ,
+  database: process.env.DB_DATABASE ,
   waitForConnections: true,
   connectionLimit: 10,
   queueLimit: 0
